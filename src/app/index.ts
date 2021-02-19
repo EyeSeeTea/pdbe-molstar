@@ -570,6 +570,20 @@ class PDBeMolstarPlugin {
             }
 
         },
+        setVisibility: (label: string, visible: boolean) => {
+            this.getCellsByLabel(label).forEach(({ ref, state }) => {
+                const isCurrentlyVisible = !state || !state.isHidden;
+
+                if (visible !== isCurrentlyVisible) {
+                    PluginCommands.State.ToggleVisibility(this.plugin, { state: this.state, ref  });
+                }
+            })
+        },
+        remove: (label: string) => {
+            this.getCellsByLabel(label).forEach(({ ref }) => {
+                PluginCommands.State.RemoveObject(this.plugin, { state: this.state, ref });
+            })
+        },
         toggleSpin: (isSpinning?: boolean, resetCamera?: boolean) => {
             if (!this.plugin.canvas3d) return;
             const trackball =  this.plugin.canvas3d.props.trackball;
@@ -612,6 +626,15 @@ class PDBeMolstarPlugin {
             }
 
         }
+    }
+
+    private getCellsByLabel(label: string): Array<{ ref: string; state: StateTransform.State; }> {
+        return Array.from(this.plugin.state.data.cells)
+            .map(([ref, cell]) => ({ ref, cell }))
+            .filter(({ cell }) => cell.obj?.label === label)
+            .map(({ ref }) => ({ ref, compVisual: this.plugin.state.data.select(ref)[0] }))
+            .filter(({ compVisual }) => compVisual && compVisual.obj)
+            .map(({ ref, compVisual }) => ({ ref, state: compVisual.state }));
     }
 
     async clear() {
