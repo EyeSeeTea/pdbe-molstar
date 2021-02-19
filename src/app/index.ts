@@ -623,4 +623,7 @@ class PDBeMolstarPlugin {
     }
 }
 
+export { PDBeMolstarPlugin }
+
+
 (window as any).PDBeMolstarPlugin = PDBeMolstarPlugin;
