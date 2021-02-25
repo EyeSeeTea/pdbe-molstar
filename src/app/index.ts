@@ -36,6 +36,11 @@ require('Molstar/mol-plugin-ui/skin/dark.scss');
 // Override carbon by chain-id theme default
 ElementSymbolColorThemeParams.carbonByChainId.defaultValue = false;
 
+export interface Selector {
+    label?: string,
+    description?: string
+};
+
 class PDBeMolstarPlugin {
 
     private _ev = RxEventHelper.create();
@@ -570,8 +575,8 @@ class PDBeMolstarPlugin {
             }
 
         },
-        setVisibility: (label: string, visible: boolean) => {
-            this.getCellsByLabel(label).forEach(({ ref, state }) => {
+        setVisibility: (selector: Selector, visible: boolean) => {
+            this.getCellsBySelector(selector).forEach(({ ref, state }) => {
                 const isCurrentlyVisible = !state || !state.isHidden;
 
                 if (visible !== isCurrentlyVisible) {
@@ -579,8 +584,16 @@ class PDBeMolstarPlugin {
                 }
             })
         },
-        remove: (label: string) => {
-            this.getCellsByLabel(label).forEach(({ ref }) => {
+        getMapVolume: (): string | undefined => {
+            const { tree } = this.plugin.state.data;
+            const tagName = 'volume-streaming-info';
+            const ref = StateSelection.findTagInSubtree(tree, StateTransform.RootRef, tagName);
+            if (!ref) return;
+            const cell = this.plugin.state.data.select(ref)[0];
+            return cell ? cell.obj?.description : undefined;
+        },
+        remove: (selector: Selector) => {
+            this.getCellsBySelector(selector).forEach(({ ref }) => {
                 PluginCommands.State.RemoveObject(this.plugin, { state: this.state, ref });
             })
         },
@@ -628,10 +641,15 @@ class PDBeMolstarPlugin {
         }
     }
 
-    private getCellsByLabel(label: string): Array<{ ref: string; state: StateTransform.State; }> {
+    private getCellsBySelector(selector: Selector): Array<{ ref: string; state: StateTransform.State; }> {
+        const { label, description } = selector;
+
         return Array.from(this.plugin.state.data.cells)
             .map(([ref, cell]) => ({ ref, cell }))
-            .filter(({ cell }) => cell.obj?.label === label)
+            .filter(({ cell }) =>
+                (!label || cell.obj?.label === label) &&
+                    (!description || cell.obj?.description === description)
+            )
             .map(({ ref }) => ({ ref, compVisual: this.plugin.state.data.select(ref)[0] }))
             .filter(({ compVisual }) => compVisual && compVisual.obj)
             .map(({ ref, compVisual }) => ({ ref, state: compVisual.state }));
