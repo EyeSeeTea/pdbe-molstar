@@ -39,6 +39,7 @@ ElementSymbolColorThemeParams.carbonByChainId.defaultValue = false;
 export interface Selector {
     label?: string,
     description?: string
+    type?: {typeClass: string, name: string},
 };
 
 class PDBeMolstarPlugin {
@@ -585,11 +586,9 @@ class PDBeMolstarPlugin {
             })
         },
         getMapVolume: (): string | undefined => {
-            const { tree } = this.plugin.state.data;
-            const tagName = 'volume-streaming-info';
-            const ref = StateSelection.findTagInSubtree(tree, StateTransform.RootRef, tagName);
-            if (!ref) return;
-            const cell = this.plugin.state.data.select(ref)[0];
+            const selector = { type: { name: "Volume Streaming", typeClass: "Object" } }
+            const cell = this.getCellsBySelector(selector)
+                .find(cell => cell.obj?.data.entries && cell.obj?.data.entries[0]?.kind === "em")
             return cell ? cell.obj?.description : undefined;
         },
         remove: (selector: Selector) => {
@@ -641,18 +640,20 @@ class PDBeMolstarPlugin {
         }
     }
 
-    private getCellsBySelector(selector: Selector): Array<{ ref: string; state: StateTransform.State; }> {
-        const { label, description } = selector;
+    private getCellsBySelector(selector: Selector) {
+        const { label, description, type } = selector;
 
         return Array.from(this.plugin.state.data.cells)
             .map(([ref, cell]) => ({ ref, cell }))
             .filter(({ cell }) =>
-                (!label || cell.obj?.label === label) &&
+                (!type || (cell.obj?.type.typeClass ===  type.typeClass &&
+                             cell.obj?.type.name ===  type.name)) &&
+                    (!label || cell.obj?.label === label) &&
                     (!description || cell.obj?.description === description)
             )
-            .map(({ ref }) => ({ ref, compVisual: this.plugin.state.data.select(ref)[0] }))
-            .filter(({ compVisual }) => compVisual && compVisual.obj)
-            .map(({ ref, compVisual }) => ({ ref, state: compVisual.state }));
+            .map(({ ref }) => ({ ref, cell: this.plugin.state.data.select(ref)[0] }))
+            .filter(({ cell }) => cell && cell.obj)
+            .map(({ ref, cell }) => ({ ref, state: cell.state, obj: cell.obj }));
     }
 
     async clear() {
