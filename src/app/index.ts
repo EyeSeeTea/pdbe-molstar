@@ -37,8 +37,8 @@ require('Molstar/mol-plugin-ui/skin/dark.scss');
 ElementSymbolColorThemeParams.carbonByChainId.defaultValue = false;
 
 export interface Selector {
-    label?: string,
-    description?: string
+    label?: RegExp,
+    description?: RegExp
     type?: {typeClass: string, name: string},
 };
 
@@ -648,8 +648,8 @@ class PDBeMolstarPlugin {
             .filter(({ cell }) =>
                 (!type || (cell.obj?.type.typeClass ===  type.typeClass &&
                              cell.obj?.type.name ===  type.name)) &&
-                    (!label || cell.obj?.label === label) &&
-                    (!description || cell.obj?.description === description)
+                    (!label || Boolean(cell.obj?.label.match(label))) &&
+                    (!description || Boolean(cell.obj?.description?.match(description)))
             )
             .map(({ ref }) => ({ ref, cell: this.plugin.state.data.select(ref)[0] }))
             .filter(({ cell }) => cell && cell.obj)
