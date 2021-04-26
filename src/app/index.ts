@@ -30,6 +30,7 @@ import { clearStructureOverpaint } from 'Molstar/mol-plugin-state/helpers/struct
 import { ElementSymbolColorThemeParams } from 'Molstar/mol-theme/color/element-symbol';
 import { SuperpositionFocusRepresentation } from './superposition-focus-representation';
 import { SuperpostionViewport } from './ui/superposition-viewport';
+import { DownloadDensity, EmdbDownloadProvider } from "Molstar/mol-plugin-state/actions/volume"
 
 require('Molstar/mol-plugin-ui/skin/dark.scss');
 
@@ -282,6 +283,18 @@ class PDBeMolstarPlugin {
                 if (current) this.plugin.managers.camera.focusLoci(current);
             }, 500);
         }
+    }
+
+    async loadEmdb(options: { id: string, detail: number, provider: EmdbDownloadProvider }) {
+        return this.plugin.runTask(this.plugin.state.data.applyAction(DownloadDensity, {
+            source: {
+                name: 'pdb-emd-ds',
+                params: {
+                    provider: { id: options.id, server: options.provider },
+                    detail: options.detail,
+                }
+            }
+        }));
     }
 
     async load({ url, format = 'mmcif', isBinary = false, assemblyId = '' }: LoadParams, fullLoad = true) {
