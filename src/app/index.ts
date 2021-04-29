@@ -67,7 +67,8 @@ class PDBeMolstarPlugin {
             if(typeof options[param] !== 'undefined') this.initParams[param] = options[param];
         }
 
-        if(!this.initParams.moleculeId && !this.initParams.customData) return false;
+        /* Disable this guard so we can load an empty viewer */
+        // if(!this.initParams.moleculeId && !this.initParams.customData) return false;
         if(this.initParams.customData && this.initParams.customData.url && !this.initParams.customData.format) return false;
 
         // Set PDBe Plugin Spec
@@ -202,7 +203,9 @@ class PDBeMolstarPlugin {
         let id = this.initParams.moleculeId;
 
         if(!id && !this.initParams.customData){
-            throw new Error(`Mandatory parameters missing!`);
+            /* If no molecule or custom data, return nothing instead of raising an error */
+            // throw new Error(`Mandatory parameters missing!`);
+            return;
         }
 
         let query = 'full';
