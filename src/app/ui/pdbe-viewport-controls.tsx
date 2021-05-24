@@ -43,23 +43,32 @@ export class PDBeViewportControls extends ViewportControls {
             </div> }
             <div className={'msp-viewport-controls'} onMouseMove={this.onMouseMove} style={showPDBeLink ? vwpBtnsTopMargin : void 0}>
                 <div className='msp-viewport-controls-buttons'>
-                    <div>
+                    <div className="msp-pdbe-control-reset-camera">
                         <div className='msp-semi-transparent-background' />
                         {this.icon(AutorenewSvg, this.resetCamera, 'Reset Camera')}
                     </div>
-                    <div>
+                    <div className="msp-pdbe-control-snapshot">
                         <div className='msp-semi-transparent-background' />
                         {this.icon(CameraOutlinedSvg, this.toggleScreenshotExpanded, 'Screenshot / State Snapshot', this.state.isScreenshotExpanded)}
                     </div>
                     <div>
                         <div className='msp-semi-transparent-background' />
-                        {this.icon(BuildOutlinedSvg, this.toggleControls, 'Toggle Controls Panel', this.plugin.layout.state.showControls)}
-                        {this.plugin.config.get(PluginConfig.Viewport.ShowExpand) && this.icon(FullscreenSvg, this.toggleExpanded, 'Toggle Expanded Viewport', this.plugin.layout.state.isExpanded)}
-                        {this.icon(TuneSvg, this.toggleSettingsExpanded, 'Settings / Controls Info', this.state.isSettingsExpanded)}
+                        <div className="msp-pdbe-control-toggle-controls-panel">
+                            {this.icon(BuildOutlinedSvg, this.toggleControls, 'Toggle Controls Panel', this.plugin.layout.state.showControls)}
+                        </div>
+                        {this.plugin.config.get(PluginConfig.Viewport.ShowExpand) && (
+                            <div className="msp-pdbe-control-toggle-expanded-viewport">
+                                {this.icon(FullscreenSvg, this.toggleExpanded, 'Toggle Expanded Viewport', this.plugin.layout.state.isExpanded)}
+                            </div>)}
+                        <div className="msp-pdbe-control-settings">
+                            {this.icon(TuneSvg, this.toggleSettingsExpanded, 'Settings / Controls Info', this.state.isSettingsExpanded)}
+                        </div>
                     </div>
                     {this.plugin.config.get(PluginConfig.Viewport.ShowSelectionMode) && <div>
                         <div className='msp-semi-transparent-background' />
-                        <ToggleSelectionModeButton />
+                        <div className="msp-pdbe-control-toggle-selection-mode">
+                            <ToggleSelectionModeButton />
+                        </div>
                     </div>}
                 </div>
                 {this.state.isScreenshotExpanded && <div className='msp-viewport-controls-panel'>
