@@ -55,23 +55,34 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
         wrapperCtx.visual.clearHighlight();
     });
 
-    document.addEventListener('protvista-mouseover', function(e: any){
-        if(typeof e.detail !== 'undefined'){
+    document.addEventListener('protvista-mouseover', function(ev: any){
+        if(typeof ev.detail !== 'undefined'){
+            let highlightQueries: any[] = [];
 
-            let highlightQuery: any = undefined;
+            const fragments = ev.detail.type === "collection" ? ev.detail.fragments : [ev.detail];
 
-            // Create query object from event data
-            if(e.detail.start && e.detail.end){
-                highlightQuery = {
-                    start_residue_number: parseInt(e.detail.start),
-                    end_residue_number: parseInt(e.detail.end)
-                };
+            fragments.forEach((fragment: any) => {
+                let highlightQuery: any = undefined;
+
+                // Create query object from event data
+                if(fragment.start && fragment.end){
+                    highlightQuery = {
+                        start_residue_number: parseInt(fragment.start),
+                        end_residue_number: parseInt(fragment.end)
+                    };
+                }
+
+                if(fragment.feature && fragment.feature.entityId) highlightQuery['entity_id'] = fragment.feature.entityId + '';
+                if(fragment.feature && fragment.feature.bestChainId) highlightQuery['struct_asym_id'] = fragment.feature.bestChainId;
+
+                if(highlightQuery) highlightQueries.push(highlightQuery);
+            });
+
+            if (highlightQueries.length > 0) {
+                wrapperCtx.visual.highlight({data: highlightQueries});
+            } else {
+                wrapperCtx.visual.clearHighlight();
             }
-
-            if(e.detail.feature && e.detail.feature.entityId) highlightQuery['entity_id'] = e.detail.feature.entityId + '';
-            if(e.detail.feature && e.detail.feature.bestChainId) highlightQuery['struct_asym_id'] = e.detail.feature.bestChainId;
-
-            if(highlightQuery) wrapperCtx.visual.highlight({data: [highlightQuery]});
         }
     });
 
