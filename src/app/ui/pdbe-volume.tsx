@@ -10,7 +10,7 @@ import { VolumeRepresentationRef } from "molstar/lib/mol-plugin-state/manager/vo
 import { State, StateSelection } from "molstar/lib/mol-state";
 import { PurePluginUIComponent } from "molstar/lib/mol-plugin-ui/base";
 import { ActionMenu } from "molstar/lib/mol-plugin-ui/controls/action-menu";
-import { Button,  ControlRow } from "molstar/lib/mol-plugin-ui/controls/common";
+import { Button, ControlRow } from "molstar/lib/mol-plugin-ui/controls/common";
 import { UpdateTransformControl } from "molstar/lib/mol-plugin-ui/state/update-transform";
 import { PluginCommands } from "molstar/lib/mol-plugin/commands";
 import { Slider } from "molstar/lib/mol-plugin-ui/controls/slider";
@@ -68,13 +68,9 @@ class VolumeRepresentationCustomControls extends PurePluginUIComponent<
     state = { action: undefined, detail: config.detail.default };
 
     componentDidMount() {
-        const { url } = this.getInfo();
+        const { detail } = this.getInfo();
 
-        if (url) {
-            const detailStr = url.match(/detail=(\d+)/)?.[1];
-            const detail = detailStr ? parseInt(detailStr) : NaN;
-            if (!Number.isNaN(detail)) this.setState({ detail });
-        }
+        if (detail) this.setState({ detail });
 
         this.subscribe(this.plugin.state.events.cell.stateUpdated, (e) => {
             if (State.ObjectEvent.isCell(e, this.props.representation.cell)) this.forceUpdate();
@@ -116,34 +112,45 @@ class VolumeRepresentationCustomControls extends PurePluginUIComponent<
     getInfo = () => {
         const state = this.plugin.state.data;
         const sourceRef = this.props.representation.cell.sourceRef;
+        const base = {
+            dataCell: undefined,
+            url: undefined,
+            detail: undefined,
+            emdbId: undefined,
+        };
+        if (!sourceRef) return base;
 
-        const dataNode = sourceRef
-            ? StateSelection.findAncestorOfType(state.tree, state.cells, sourceRef, [PluginStateObject.Data.Binary])
-            : undefined;
+        const dataCell = StateSelection.findAncestorOfType(state.tree, state.cells, sourceRef, [
+            PluginStateObject.Data.Binary,
+        ]);
 
-        const url: string | undefined = dataNode?.params?.values?.url;
+        const url: string | undefined = dataCell?.params?.values?.url;
 
-        if (!dataNode) {
+        if (!dataCell) {
             console.error("Cannot find data node for volume");
-            return { dataNode: undefined, url: undefined };
+            return base;
         } else if (!url) {
             console.error("Cannot get URL for volume");
-            return { dataNode, url: undefined };
+            return { ...base, url: undefined };
         } else {
-            return { dataNode, url };
+            const detailStr = url.match(/detail=(\d+)/)?.[1];
+            const detailN = detailStr ? parseInt(detailStr) : NaN;
+            const detail = !Number.isNaN(detailN) ? detailN : undefined;
+            const emdbId = url.match(/emd-\d+/i)?.[0]?.toUpperCase();
+            return { dataCell, url, detail, emdbId };
         }
     };
 
     setDetail = async (detail: number) => {
-        const { url, dataNode } = this.getInfo();
-        if (!dataNode || !url) return;
+        const { url, dataCell } = this.getInfo();
+        if (!dataCell || !url) return;
 
         this.setState({ detail });
 
         const newUrl = url.replace(/detail=\d+/, `detail=${detail}`);
         const params = { url: newUrl, isBinary: true, format: "dscif" };
         const { state } = this.plugin;
-        await state.updateTransform(state.data, dataNode.transform.ref, params);
+        await state.updateTransform(state.data, dataCell.transform.ref, params);
     };
 
     render() {
