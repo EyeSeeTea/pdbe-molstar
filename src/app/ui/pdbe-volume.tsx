@@ -10,10 +10,9 @@ import { VolumeRepresentationRef } from "molstar/lib/mol-plugin-state/manager/vo
 import { State, StateSelection } from "molstar/lib/mol-state";
 import { PurePluginUIComponent } from "molstar/lib/mol-plugin-ui/base";
 import { ActionMenu } from "molstar/lib/mol-plugin-ui/controls/action-menu";
-import { Button, IconButton, ControlRow } from "molstar/lib/mol-plugin-ui/controls/common";
+import { Button,  ControlRow } from "molstar/lib/mol-plugin-ui/controls/common";
 import { UpdateTransformControl } from "molstar/lib/mol-plugin-ui/state/update-transform";
 import { PluginCommands } from "molstar/lib/mol-plugin/commands";
-import { AddSvg } from "molstar/lib/mol-plugin-ui/controls/icons";
 import { Slider } from "molstar/lib/mol-plugin-ui/controls/slider";
 import { PluginStateObject } from "molstar/lib/mol-plugin-state/objects";
 import { VolumeSourceControls } from "molstar/lib/mol-plugin-ui/structure/volume";
@@ -32,16 +31,6 @@ export class VolumeSourceCustomControls extends VolumeSourceControls {
                     <Button noOverflow flex onClick={this.toggleHierarchy} disabled={disabled} title={label}>
                         {label}
                     </Button>
-
-                    {!this.isEmpty && (
-                        <IconButton
-                            svg={AddSvg}
-                            onClick={this.toggleAddRepr}
-                            title="Apply a structure presets to the current hierarchy."
-                            toggleState={this.state.show === "add-repr"}
-                            disabled={disabled}
-                        />
-                    )}
                 </div>
 
                 {this.state.show === "hierarchy" && (
