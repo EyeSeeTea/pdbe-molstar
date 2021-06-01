@@ -32,6 +32,7 @@ export class VolumeSourceCustomControls extends VolumeSourceControls {
                     <Button noOverflow flex onClick={this.toggleHierarchy} disabled={disabled} title={label}>
                         {label}
                     </Button>
+
                     {!this.isEmpty && (
                         <IconButton
                             svg={AddSvg}
@@ -61,15 +62,31 @@ export class VolumeSourceCustomControls extends VolumeSourceControls {
     }
 }
 
-type VolumeRepresentationEntryActions = "update";
+/* Custom PDBe volume controls:
+
+    - Assume format 'dscif', binary.
+    - Assume volume URL contains detail=N
+*/
+
+const config = {
+    detail: { min: 0, max: 6, default: 3 },
+};
 
 class VolumeRepresentationCustomControls extends PurePluginUIComponent<
     { representation: VolumeRepresentationRef },
-    { action?: VolumeRepresentationEntryActions; detail: number }
+    { detail: number }
 > {
-    state = { action: void 0 as VolumeRepresentationEntryActions | undefined, detail: 3 };
+    state = { action: undefined, detail: config.detail.default };
 
     componentDidMount() {
+        const { url } = this.getInfo();
+
+        if (url) {
+            const detailStr = url.match(/detail=(\d+)/)?.[1];
+            const detail = detailStr ? parseInt(detailStr) : NaN;
+            if (!Number.isNaN(detail)) this.setState({ detail });
+        }
+
         this.subscribe(this.plugin.state.events.cell.stateUpdated, (e) => {
             if (State.ObjectEvent.isCell(e, this.props.representation.cell)) this.forceUpdate();
         });
@@ -83,10 +100,6 @@ class VolumeRepresentationCustomControls extends PurePluginUIComponent<
         e.preventDefault();
         e.currentTarget.blur();
         this.plugin.managers.volume.hierarchy.toggleVisibility([this.props.representation]);
-    };
-
-    toggleUpdate = () => {
-        return this.setState({ action: this.state.action === "update" ? void 0 : "update" });
     };
 
     highlight = (e: React.MouseEvent<HTMLElement>) => {
@@ -111,30 +124,37 @@ class VolumeRepresentationCustomControls extends PurePluginUIComponent<
         this.plugin.managers.camera.focusRenderObjects(objects, { extraRadius: 1 });
     };
 
-    setDetail = async (detail: number) => {
-        const sourceRef = this.props.representation.cell.sourceRef;
-        if (!sourceRef) return;
-
+    getInfo = () => {
         const state = this.plugin.state.data;
-        const dataNode = StateSelection.findAncestorOfType(state.tree, state.cells, sourceRef, [
-            PluginStateObject.Data.Binary,
-        ]);
+        const sourceRef = this.props.representation.cell.sourceRef;
+
+        const dataNode = sourceRef
+            ? StateSelection.findAncestorOfType(state.tree, state.cells, sourceRef, [PluginStateObject.Data.Binary])
+            : undefined;
+
+        const url: string | undefined = dataNode?.params?.values?.url;
 
         if (!dataNode) {
             console.error("Cannot find data node for volume");
-            return;
-        }
-        const url: string | undefined = dataNode.params?.values?.url;
-        if (!url) {
+            return { dataNode: undefined, url: undefined };
+        } else if (!url) {
             console.error("Cannot get URL for volume");
-            return;
+            return { dataNode, url: undefined };
+        } else {
+            return { dataNode, url };
         }
+    };
+
+    setDetail = async (detail: number) => {
+        const { url, dataNode } = this.getInfo();
+        if (!dataNode || !url) return;
 
         this.setState({ detail });
 
         const newUrl = url.replace(/detail=\d+/, `detail=${detail}`);
         const params = { url: newUrl, isBinary: true, format: "dscif" };
-        await this.plugin.state.updateTransform(state, dataNode.transform.ref, params);
+        const { state } = this.plugin;
+        await state.updateTransform(state.data, dataNode.transform.ref, params);
     };
 
     render() {
@@ -146,7 +166,13 @@ class VolumeRepresentationCustomControls extends PurePluginUIComponent<
                     label="Detail"
                     control={
                         <div style={{ display: "flex", textAlignLast: "center" }}>
-                            <Slider value={this.state.detail} min={0} max={6} step={1} onChange={this.setDetail} />
+                            <Slider
+                                value={this.state.detail}
+                                min={config.detail.min}
+                                max={config.detail.max}
+                                step={1}
+                                onChange={this.setDetail}
+                            />
                         </div>
                     }
                 />
