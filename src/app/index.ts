@@ -300,6 +300,15 @@ class PDBeMolstarPlugin {
         }));
     }
 
+    async loadEmdbFromUrl(options: { url: string, isBinary: boolean, format: string }) {
+        return this.plugin.runTask(this.plugin.state.data.applyAction(DownloadDensity, {
+            source: {
+                name: 'url',
+                params: options,
+            }
+        }));
+    }
+
     async load({ url, format = 'mmcif', isBinary = false, assemblyId = '' }: LoadParams, fullLoad = true) {
         if(fullLoad) this.clear();
         const isHetView = this.initParams.ligandView ? true : false;
