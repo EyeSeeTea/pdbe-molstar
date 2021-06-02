@@ -55,7 +55,27 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
         wrapperCtx.visual.clearHighlight();
     });
 
-    document.addEventListener('protvista-mouseover', function(ev: any){
+    document.addEventListener('protvista-mouseover', function(e: any){
+        if(typeof e.detail !== 'undefined'){
+
+            let highlightQuery: any = undefined;
+
+            // Create query object from event data
+            if(e.detail.start && e.detail.end){
+                highlightQuery = {
+                    start_residue_number: parseInt(e.detail.start),
+                    end_residue_number: parseInt(e.detail.end)
+                };
+            }
+
+            if(e.detail.feature && e.detail.feature.entityId) highlightQuery['entity_id'] = e.detail.feature.entityId + '';
+            if(e.detail.feature && e.detail.feature.bestChainId) highlightQuery['struct_asym_id'] = e.detail.feature.bestChainId;
+
+            if(highlightQuery) wrapperCtx.visual.highlight({data: [highlightQuery]});
+        }
+    });
+
+    document.addEventListener('protvista-multiselect', function(ev: any){
         if(typeof ev.detail !== 'undefined'){
             let highlightQueries: any[] = [];
 
@@ -68,7 +88,8 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
                 if(fragment.start && fragment.end){
                     highlightQuery = {
                         start_residue_number: parseInt(fragment.start),
-                        end_residue_number: parseInt(fragment.end)
+                        end_residue_number: parseInt(fragment.end),
+                        color: fragment.color,
                     };
                 }
 
@@ -78,10 +99,13 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
                 if(highlightQuery) highlightQueries.push(highlightQuery);
             });
 
+            wrapperCtx.visual.clearSelection()
+
             if (highlightQueries.length > 0) {
-                wrapperCtx.visual.highlight({data: highlightQueries});
-            } else {
-                wrapperCtx.visual.clearHighlight();
+                wrapperCtx.visual.select({
+                    data: highlightQueries,
+                    nonSelectedColor: { r: 255, g: 255, b: 255 },
+                })
             }
         }
     });
