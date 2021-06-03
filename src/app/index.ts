@@ -7,7 +7,6 @@ import { Loci, EmptyLoci } from 'Molstar/mol-model/loci';
 import { RxEventHelper } from 'Molstar/mol-util/rx-event-helper';
 import { LoadParams, PDBeVolumes, LigandView, QueryHelper, QueryParam } from './helpers';
 import { PDBeStructureTools, PDBeSuperpositionStructureTools, PDBeLigandViewStructureTools } from './ui/pdbe-structure-controls';
-import { PDBeViewportControls } from './ui/pdbe-viewport-controls';
 import { BuiltInTrajectoryFormat } from 'Molstar/mol-plugin-state/formats/trajectory';
 import { StateSelection } from 'Molstar/mol-state';
 import { StructureFocusRepresentation } from 'Molstar/mol-plugin/behavior/dynamic/selection/structure-focus-representation';
@@ -31,6 +30,7 @@ import { ElementSymbolColorThemeParams } from 'Molstar/mol-theme/color/element-s
 import { SuperpositionFocusRepresentation } from './superposition-focus-representation';
 import { SuperpostionViewport } from './ui/superposition-viewport';
 import { DownloadDensity, EmdbDownloadProvider } from "Molstar/mol-plugin-state/actions/volume"
+import { PDBeViewportControlsVolume } from './ui/pdbe-viewport-controls-volume';
 
 require('Molstar/mol-plugin-ui/skin/dark.scss');
 
@@ -113,7 +113,7 @@ class PDBeMolstarPlugin {
 
         pdbePluginSpec.components = {
             viewport: {
-                controls: PDBeViewportControls,
+                controls: PDBeViewportControlsVolume,
                 view: this.initParams.superposition ? SuperpostionViewport : void 0
             },
             remoteState: 'none',
@@ -296,6 +296,15 @@ class PDBeMolstarPlugin {
                     provider: { id: options.id, server: options.provider },
                     detail: options.detail,
                 }
+            }
+        }));
+    }
+
+    async loadEmdbFromUrl(options: { url: string, isBinary: boolean, format: string }) {
+        return this.plugin.runTask(this.plugin.state.data.applyAction(DownloadDensity, {
+            source: {
+                name: 'url',
+                params: options,
             }
         }));
     }
