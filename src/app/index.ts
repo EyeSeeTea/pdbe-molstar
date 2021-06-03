@@ -30,11 +30,18 @@ import { clearStructureOverpaint } from 'Molstar/mol-plugin-state/helpers/struct
 import { ElementSymbolColorThemeParams } from 'Molstar/mol-theme/color/element-symbol';
 import { SuperpositionFocusRepresentation } from './superposition-focus-representation';
 import { SuperpostionViewport } from './ui/superposition-viewport';
+import { DownloadDensity, EmdbDownloadProvider } from "Molstar/mol-plugin-state/actions/volume"
 
 require('Molstar/mol-plugin-ui/skin/dark.scss');
 
 // Override carbon by chain-id theme default
 ElementSymbolColorThemeParams.carbonByChainId.defaultValue = false;
+
+export interface Selector {
+    label?: RegExp,
+    description?: RegExp
+    type?: {typeClass: string, name: string},
+};
 
 class PDBeMolstarPlugin {
 
@@ -60,7 +67,8 @@ class PDBeMolstarPlugin {
             if(typeof options[param] !== 'undefined') this.initParams[param] = options[param];
         }
 
-        if(!this.initParams.moleculeId && !this.initParams.customData) return false;
+        /* Disable this guard so we can load an empty viewer */
+        // if(!this.initParams.moleculeId && !this.initParams.customData) return false;
         if(this.initParams.customData && this.initParams.customData.url && !this.initParams.customData.format) return false;
 
         // Set PDBe Plugin Spec
@@ -195,7 +203,9 @@ class PDBeMolstarPlugin {
         let id = this.initParams.moleculeId;
 
         if(!id && !this.initParams.customData){
-            throw new Error(`Mandatory parameters missing!`);
+            /* If no molecule or custom data, return nothing instead of raising an error */
+            // throw new Error(`Mandatory parameters missing!`);
+            return;
         }
 
         let query = 'full';
@@ -276,6 +286,18 @@ class PDBeMolstarPlugin {
                 if (current) this.plugin.managers.camera.focusLoci(current);
             }, 500);
         }
+    }
+
+    async loadEmdb(options: { id: string, detail: number, provider: EmdbDownloadProvider }) {
+        return this.plugin.runTask(this.plugin.state.data.applyAction(DownloadDensity, {
+            source: {
+                name: 'pdb-emd-ds',
+                params: {
+                    provider: { id: options.id, server: options.provider },
+                    detail: options.detail,
+                }
+            }
+        }));
     }
 
     async load({ url, format = 'mmcif', isBinary = false, assemblyId = '' }: LoadParams, fullLoad = true) {
@@ -570,6 +592,26 @@ class PDBeMolstarPlugin {
             }
 
         },
+        setVisibility: (selector: Selector, visible: boolean) => {
+            this.getCellsBySelector(selector).forEach(({ ref, state }) => {
+                const isCurrentlyVisible = !state || !state.isHidden;
+
+                if (visible !== isCurrentlyVisible) {
+                    PluginCommands.State.ToggleVisibility(this.plugin, { state: this.state, ref  });
+                }
+            })
+        },
+        getMapVolume: (): string | undefined => {
+            const selector = { type: { name: "Volume Streaming", typeClass: "Object" } }
+            const cell = this.getCellsBySelector(selector)
+                .find(cell => cell.obj?.data.entries && cell.obj?.data.entries[0]?.kind === "em")
+            return cell ? cell.obj?.description : undefined;
+        },
+        remove: (selector: Selector) => {
+            this.getCellsBySelector(selector).forEach(({ ref }) => {
+                PluginCommands.State.RemoveObject(this.plugin, { state: this.state, ref });
+            })
+        },
         toggleSpin: (isSpinning?: boolean, resetCamera?: boolean) => {
             if (!this.plugin.canvas3d) return;
             const trackball =  this.plugin.canvas3d.props.trackball;
@@ -614,6 +656,22 @@ class PDBeMolstarPlugin {
         }
     }
 
+    private getCellsBySelector(selector: Selector) {
+        const { label, description, type } = selector;
+
+        return Array.from(this.plugin.state.data.cells)
+            .map(([ref, cell]) => ({ ref, cell }))
+            .filter(({ cell }) =>
+                (!type || (cell.obj?.type.typeClass ===  type.typeClass &&
+                             cell.obj?.type.name ===  type.name)) &&
+                    (!label || Boolean(cell.obj?.label.match(label))) &&
+                    (!description || Boolean(cell.obj?.description?.match(description)))
+            )
+            .map(({ ref }) => ({ ref, cell: this.plugin.state.data.select(ref)[0] }))
+            .filter(({ cell }) => cell && cell.obj)
+            .map(({ ref, cell }) => ({ ref, state: cell.state, obj: cell.obj }));
+    }
+
     async clear() {
         this.plugin.clear();
         this.assemblyRef = '';
@@ -622,5 +680,8 @@ class PDBeMolstarPlugin {
         this.isSelectedColorUpdated = false;
     }
 }
+
+export { PDBeMolstarPlugin }
+
 
 (window as any).PDBeMolstarPlugin = PDBeMolstarPlugin;
