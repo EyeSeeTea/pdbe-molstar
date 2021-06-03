@@ -7,7 +7,7 @@ import { SimpleSettingsControl } from 'Molstar/mol-plugin-ui/viewport/simple-set
 import { ViewportControls } from 'Molstar/mol-plugin-ui/viewport';
 import { AutorenewSvg, CameraOutlinedSvg, BuildOutlinedSvg, FullscreenSvg, TuneSvg, CloseSvg, BlurOnSvg } from 'Molstar/mol-plugin-ui/controls/icons';
 import { PluginUIComponent } from 'molstar/lib/mol-plugin-ui/base';
-import { VolumeStreamingControls, VolumeSourceControls } from 'molstar/lib/mol-plugin-ui/structure/volume';
+import { VolumeSourceCustomControls } from './pdbe-volume';
 
 /* We need to add stateful components to PDBeViewportControls, but we cannot extend ViewportControls
    with new props/state as ViewportControls is not generic. As a workaround, use a custom extended
@@ -16,15 +16,20 @@ import { VolumeStreamingControls, VolumeSourceControls } from 'molstar/lib/mol-p
 type ViewportControlsState = ViewportControls extends PluginUIComponent<unknown, infer State> ? State : never;
 
 interface ControlsExtendedState extends ViewportControlsState {
+    isVolumeVisible: boolean,
     isVolumeExpanded: boolean;
 }
 
 type ExtendedSetState = (cb: (prevState: ControlsExtendedState) => Partial<ControlsExtendedState>) => void;
 
-export class PDBeViewportControls extends ViewportControls {
+export class PDBeViewportControlsVolume extends ViewportControls {
     constructor(props: any, context: any) {
         super(props, context);
-        this.state = { ...this.state, isVolumeExpanded: false } as ViewportControlsState;
+        this.state = {
+            ...this.state,
+            isVolumeExpanded: false,
+            isVolumeVisible: false,
+        } as ViewportControlsState;
     }
 
     toggleVolumeExpanded = () => {
@@ -41,8 +46,16 @@ export class PDBeViewportControls extends ViewportControls {
         return false;
     }
 
+    componentDidMount() {
+        this.subscribe(this.plugin.managers.volume.hierarchy.behaviors.selection, sel => {
+            (this.setState as ExtendedSetState)(() => ({
+                isVolumeVisible: sel.hierarchy.volumes.length > 0
+            }));
+        });
+    }
+
     render() {
-        const isVolumeExpanded = (this.state as ControlsExtendedState).isVolumeExpanded;
+        const { isVolumeVisible, isVolumeExpanded } = (this.state as ControlsExtendedState);
         const customeState: any = this.plugin.customState;
         let showPDBeLink = false;
         if(customeState && customeState.initParams && customeState.initParams.moleculeId && customeState.initParams.pdbeLink) showPDBeLink = true;
@@ -97,10 +110,12 @@ export class PDBeViewportControls extends ViewportControls {
                         </div>
                     </div>}
 
-                    <div className="msp-pdbe-control-volume">
-                        <div className='msp-semi-transparent-background' />
-                        {this.icon(BlurOnSvg, this.toggleVolumeExpanded, 'Volume', isVolumeExpanded)}
-                    </div>
+                    {isVolumeVisible &&
+                        <div className="msp-pdbe-control-volume">
+                            <div className='msp-semi-transparent-background' />
+                            {this.icon(BlurOnSvg, this.toggleVolumeExpanded, 'Volume', isVolumeExpanded)}
+                        </div>
+                    }
                 </div>
 
                 {this.state.isScreenshotExpanded && <div className='msp-viewport-controls-panel'>
@@ -120,8 +135,7 @@ export class PDBeViewportControls extends ViewportControls {
                 {isVolumeExpanded && <div className='msp-viewport-controls-panel'>
                     <ControlGroup header='Volume' title='Click to close.' initialExpanded={true} hideExpander={true} hideOffset={true} onHeaderClick={this.toggleVolumeExpanded}
                         topRightIcon={CloseSvg} noTopMargin childrenClassName='msp-viewport-controls-panel-controls'>
-                        <VolumeStreamingControls />
-                        <VolumeSourceControls />
+                        <VolumeSourceCustomControls />
                     </ControlGroup>
                 </div>}
             </div>

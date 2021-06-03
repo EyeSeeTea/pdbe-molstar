@@ -82,7 +82,7 @@ export class LeftPanelControls extends PluginUIComponent<{}, { tab: LeftPanelTab
         return <div className='msp-left-panel-controls'>
             <div className='msp-left-panel-controls-buttons'>
                 {/* <IconButton svg={HomeOutlined} toggleState={tab === 'root'} transparent onClick={() => this.set('root')} title='Home' /> */}
-                {/* <DataIcon set={this.set} /> */}
+                <DataIcon set={this.set} />
                 {/* <IconButton svg={SaveOutlined} toggleState={tab === 'states'} transparent onClick={() => this.set('states')} title='Plugin State' /> */}
                 <IconButton svg={HelpOutlineSvg} toggleState={tab === 'help'} transparent onClick={() => this.set('help')} title='Help' />
                 {customState && customState.initParams && customState.initParams.superposition && <IconButton svg={WavesIconSvg} toggleState={tab === 'segments'} transparent onClick={() => this.set('segments')} title='Superpose segments' />}
@@ -97,30 +97,30 @@ export class LeftPanelControls extends PluginUIComponent<{}, { tab: LeftPanelTab
     }
 }
 
-// class DataIcon extends PluginUIComponent<{ set: (tab: LeftPanelTabName) => void }, { changed: boolean }> {
-//     state = { changed: false };
+class DataIcon extends PluginUIComponent<{ set: (tab: LeftPanelTabName) => void }, { changed: boolean }> {
+    state = { changed: false };
 
-//     get tab() {
-//         return this.plugin.behaviors.layout.leftPanelTabName.value;
-//     }
+    get tab() {
+        return this.plugin.behaviors.layout.leftPanelTabName.value;
+    }
 
-//     componentDidMount() {
-//         this.subscribe(this.plugin.behaviors.layout.leftPanelTabName, tab => {
-//             if (this.tab === 'data') this.setState({ changed: false });
-//             else this.forceUpdate();
-//         });
+    componentDidMount() {
+        this.subscribe(this.plugin.behaviors.layout.leftPanelTabName, tab => {
+            if (this.tab === 'data') this.setState({ changed: false });
+            else this.forceUpdate();
+        });
 
-//         this.subscribe(this.plugin.state.data.events.changed, state => {
-//             if (this.tab !== 'data') this.setState({ changed: true });
-//         });
-//     }
+        this.subscribe(this.plugin.state.data.events.changed, state => {
+            if (this.tab !== 'data') this.setState({ changed: true });
+        });
+    }
 
-//     render() {
-//         return <IconButton
-//             svg={AccountTreeOutlinedSvg} toggleState={this.tab === 'data'} transparent onClick={() => this.props.set('data')} title='State Tree'
-//             style={{ position: 'relative' }} extraContent={this.state.changed ? <div className='msp-left-panel-controls-button-data-dirty' /> : void 0} />;
-//     }
-// }
+    render() {
+        return <IconButton
+            svg={AccountTreeOutlinedSvg} toggleState={this.tab === 'data'} transparent onClick={() => this.props.set('data')} title='State Tree'
+            style={{ position: 'relative' }} extraContent={this.state.changed ? <div className='msp-left-panel-controls-button-data-dirty' /> : void 0} />;
+    }
+}
 
 class FullSettings extends PluginUIComponent {
     private setSettings = (p: { param: PD.Base<any>, name: string, value: any }) => {
