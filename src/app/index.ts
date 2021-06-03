@@ -289,7 +289,7 @@ class PDBeMolstarPlugin {
     }
 
     async loadEmdb(options: { id: string, detail: number, provider: EmdbDownloadProvider }) {
-        return this.plugin.runTask(this.plugin.state.data.applyAction(DownloadDensity, {
+        await this.plugin.runTask(this.plugin.state.data.applyAction(DownloadDensity, {
             source: {
                 name: 'pdb-emd-ds',
                 params: {
@@ -298,15 +298,19 @@ class PDBeMolstarPlugin {
                 }
             }
         }));
+
+        this.events.loadComplete.next(true);
     }
 
     async loadEmdbFromUrl(options: { url: string, isBinary: boolean, format: string }) {
-        return this.plugin.runTask(this.plugin.state.data.applyAction(DownloadDensity, {
+        await this.plugin.runTask(this.plugin.state.data.applyAction(DownloadDensity, {
             source: {
                 name: 'url',
                 params: options,
             }
         }));
+
+        this.events.loadComplete.next(true);
     }
 
     async load({ url, format = 'mmcif', isBinary = false, assemblyId = '' }: LoadParams, fullLoad = true) {
