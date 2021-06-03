@@ -1,3 +1,5 @@
+import { QueryParam } from './helpers';
+
 export function subscribeToComponentEvents(wrapperCtx: any) {
     document.addEventListener('PDB.interactions.click', function(e: any){
         if(typeof e.detail !== 'undefined'){
@@ -75,38 +77,27 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
         }
     });
 
-    document.addEventListener('protvista-multiselect', function(ev: any){
-        if(typeof ev.detail !== 'undefined'){
-            let highlightQueries: any[] = [];
+    document.addEventListener('protvista-multiselect', (ev) => {
+        const { detail } = (ev as unknown as ({ detail: MultiSelectDetail | undefined }));
+        if (detail === undefined) return;
 
-            const fragments = ev.detail.type === "collection" ? ev.detail.fragments : [ev.detail];
+        const params = (detail.fragments || []).map((fragment): QueryParam => {
+            return {
+                start_residue_number: (fragment.start),
+                end_residue_number: (fragment.end),
+                color: fragment.color,
+                entity_id: fragment.feature?.entityId,
+                struct_asym_id: fragment.feature?.bestChainId,
+            };
+        });
 
-            fragments.forEach((fragment: any) => {
-                let highlightQuery: any = undefined;
-
-                // Create query object from event data
-                if(fragment.start && fragment.end){
-                    highlightQuery = {
-                        start_residue_number: parseInt(fragment.start),
-                        end_residue_number: parseInt(fragment.end),
-                        color: fragment.color,
-                    };
-                }
-
-                if(fragment.feature && fragment.feature.entityId) highlightQuery['entity_id'] = fragment.feature.entityId + '';
-                if(fragment.feature && fragment.feature.bestChainId) highlightQuery['struct_asym_id'] = fragment.feature.bestChainId;
-
-                if(highlightQuery) highlightQueries.push(highlightQuery);
+        if (params.length === 0) {
+            wrapperCtx.visual.clearSelection();
+        } else {
+            wrapperCtx.visual.select({
+                data: params,
+                nonSelectedColor: { r: 255, g: 255, b: 255 },
             });
-
-            wrapperCtx.visual.clearSelection()
-
-            if (highlightQueries.length > 0) {
-                wrapperCtx.visual.select({
-                    data: highlightQueries,
-                    nonSelectedColor: { r: 255, g: 255, b: 255 },
-                })
-            }
         }
     });
 
@@ -239,4 +230,18 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
     document.addEventListener('PDB.seqViewer.mouseout', function(e){
         wrapperCtx.visual.clearHighlight();
     });
+}
+
+interface MultiSelectDetail {
+    fragments?: Array<{
+        start: number,
+        end: number,
+        color?: string,
+        chain?: string
+        feature?: {
+            entityId: string,
+            bestChainId: string
+        }
+    }>
+
 }
