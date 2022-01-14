@@ -2,7 +2,7 @@ import * as React from 'react';
 import { PluginConfig } from 'Molstar/mol-plugin/config';
 import { ControlGroup } from 'Molstar/mol-plugin-ui/controls/common';
 import { ToggleSelectionModeButton } from 'Molstar/mol-plugin-ui/structure/selection';
-import { DownloadScreenshotControls } from 'Molstar/mol-plugin-ui/viewport/screenshot';
+import { DownloadScreenshotControls } from './pdbe-screenshot-controls';
 import { SimpleSettingsControl } from 'Molstar/mol-plugin-ui/viewport/simple-settings';
 import { ViewportControls } from 'Molstar/mol-plugin-ui/viewport';
 import { AutorenewSvg, CameraOutlinedSvg, BuildOutlinedSvg, FullscreenSvg, TuneSvg, CloseSvg, BlurOnSvg } from 'Molstar/mol-plugin-ui/controls/icons';
@@ -45,8 +45,12 @@ export class PDBeViewportControls extends ViewportControls {
         const isVolumeExpanded = (this.state as ControlsExtendedState).isVolumeExpanded;
         const customeState: any = this.plugin.customState;
         let showPDBeLink = false;
+        let showControlToggle = true;
+        let showControlInfo = true;
         if(customeState && customeState.initParams && customeState.initParams.moleculeId && customeState.initParams.pdbeLink) showPDBeLink = true;
         if(customeState && customeState.initParams && customeState.initParams.superposition) showPDBeLink = false;
+        if(customeState && customeState.initParams && customeState.initParams.hideCanvasControls && customeState.initParams.hideCanvasControls.indexOf('controlToggle') > -1) showControlToggle = false;
+        if(customeState && customeState.initParams && customeState.initParams.hideCanvasControls && customeState.initParams.hideCanvasControls.indexOf('controlInfo') > -1) showControlInfo = false;
         const bgColor = this.isBlack(customeState) ? '#fff' : '#555';
         const pdbeLink: any = {
             parentStyle: { width: 'auto' },
@@ -80,14 +84,15 @@ export class PDBeViewportControls extends ViewportControls {
                     <div>
                         <div className='msp-semi-transparent-background' />
                         <div className="msp-pdbe-control-toggle-controls-panel">
-                            {this.icon(BuildOutlinedSvg, this.toggleControls, 'Toggle Controls Panel', this.plugin.layout.state.showControls)}
+                            {showControlToggle && this.icon(BuildOutlinedSvg, this.toggleControls, 'Toggle Controls Panel', this.plugin.layout.state.showControls)}
                         </div>
-                        {this.plugin.config.get(PluginConfig.Viewport.ShowExpand) && (
+                        {this.plugin.config.get(PluginConfig.Viewport.ShowExpand) &&
                             <div className="msp-pdbe-control-toggle-expanded-viewport">
                                 {this.icon(FullscreenSvg, this.toggleExpanded, 'Toggle Expanded Viewport', this.plugin.layout.state.isExpanded)}
-                            </div>)}
+                            </div>}
+
                         <div className="msp-pdbe-control-settings">
-                            {this.icon(TuneSvg, this.toggleSettingsExpanded, 'Settings / Controls Info', this.state.isSettingsExpanded)}
+                            {showControlInfo && this.icon(TuneSvg, this.toggleSettingsExpanded, 'Settings / Controls Info', this.state.isSettingsExpanded)}
                         </div>
                     </div>
                     {this.plugin.config.get(PluginConfig.Viewport.ShowSelectionMode) && <div>
