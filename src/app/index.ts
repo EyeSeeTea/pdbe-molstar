@@ -17,11 +17,11 @@ import {
     QueryHelper,
     QueryParam,
 } from "./helpers";
-// mine import { PDBeStructureTools, PDBeSuperpositionStructureTools, PDBeLigandViewStructureTools, PDBeAfViewStructureTools } from './ui/pdbe-structure-controls';
 import {
     PDBeStructureTools,
     PDBeSuperpositionStructureTools,
     PDBeLigandViewStructureTools,
+    //PDBeAfViewStructureTools
 } from "./ui/pdbe-structure-controls";
 import { PDBeViewportControls } from "./ui/pdbe-viewport-controls";
 import { BuiltInTrajectoryFormat } from "Molstar/mol-plugin-state/formats/trajectory";
@@ -46,14 +46,11 @@ import { MAQualityAssessment } from "Molstar/extensions/model-archive/quality-as
 import { clearStructureOverpaint } from "Molstar/mol-plugin-state/helpers/structure-overpaint";
 import { SuperpositionFocusRepresentation } from "./superposition-focus-representation";
 import { SuperpostionViewport } from "./ui/superposition-viewport";
-// mine
 import {
     DownloadDensity,
     EmdbDownloadProvider,
 } from "Molstar/mol-plugin-state/actions/volume";
 import { PDBeViewportControlsVolume } from "./ui/pdbe-viewport-controls-volume";
-import { AfConfidenceScore } from "./af-confidence/behavior";
-// mine
 import { SelectLoci } from "Molstar/mol-plugin/behavior/dynamic/representation";
 import { FocusLoci } from "molstar/lib/mol-plugin/behavior/dynamic/camera";
 import { Mp4Export } from "Molstar/extensions/mp4-export";
@@ -70,7 +67,7 @@ import { AnimateAssemblyUnwind } from "Molstar/mol-plugin-state/animation/built-
 require("Molstar/mol-plugin-ui/skin/dark.scss");
 
 // Override carbon by chain-id theme default
-ElementSymbolColorThemeParams.carbonByChainId.defaultValue = false;
+// ElementSymbolColorThemeParams.carbonByChainId.defaultValue = false;
 
 export interface Selector {
     label?: RegExp;
@@ -215,9 +212,9 @@ class PDBeMolstarPlugin {
             structureTools: this.initParams.superposition
                 ? PDBeSuperpositionStructureTools
                 : this.initParams.ligandView
-                ? PDBeLigandViewStructureTools
+                ? PDBeStructureTools
                 : this.initParams.alphafoldView
-                ? PDBeAfViewStructureTools
+                ? PDBeStructureTools // PDBeAfViewStructureTools
                 : PDBeStructureTools,
         };
 
