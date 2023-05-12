@@ -1,6 +1,7 @@
 import { createPluginUI, DefaultPluginUISpec, InitParams, DefaultParams } from './spec';
 import { PluginContext } from 'Molstar/mol-plugin/context';
 import { PluginCommands } from 'Molstar/mol-plugin/commands';
+import { SequenceView } from "Molstar/mol-plugin-ui/sequence"
 import { PluginStateObject } from 'Molstar/mol-plugin-state/objects';
 import { StateTransform } from 'Molstar/mol-state';
 import { Loci, EmptyLoci } from 'Molstar/mol-model/loci';
@@ -43,6 +44,7 @@ import { AnimateStructureSpin } from 'Molstar/mol-plugin-state/animation/built-i
 import { AnimateCameraRock } from 'Molstar/mol-plugin-state/animation/built-in/camera-rock';
 import { AnimateAssemblyUnwind } from 'Molstar/mol-plugin-state/animation/built-in/assembly-unwind';
 import { DownloadDensity, EmdbDownloadProvider } from 'molstar/lib/mol-plugin-state/actions/volume';
+import { ControlsWrapper } from 'molstar/lib/mol-plugin-ui/plugin';
 
 require("Molstar/mol-plugin-ui/skin/dark.scss");
 
@@ -145,12 +147,15 @@ class PDBeMolstarPlugin {
             },
         };
 
+        const { showDebugPanels } = this.initParams
+
         pdbePluginSpec.components = {
+            // See molstar/mol-plugin-ui/plugin.tsx
             controls: {
-                left: LeftPanelControls,
-                // right: DefaultStructureTools,
+                left: showDebugPanels ? LeftPanelControls : "none",
+                right: showDebugPanels ? ControlsWrapper : "none",
                 top: "none",
-                bottom: "none",
+                bottom: SequenceView,
             },
             viewport: {
                 controls: PDBeViewportControls,
