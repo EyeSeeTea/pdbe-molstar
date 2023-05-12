@@ -1,68 +1,48 @@
-import {
-    createPluginUI,
-    DefaultPluginUISpec,
-    InitParams,
-    DefaultParams,
-} from "./spec";
-import { PluginContext } from "Molstar/mol-plugin/context";
-import { PluginCommands } from "Molstar/mol-plugin/commands";
-import { PluginStateObject } from "Molstar/mol-plugin-state/objects";
-import { StateTransform } from "Molstar/mol-state";
-import { Loci, EmptyLoci } from "Molstar/mol-model/loci";
-import { RxEventHelper } from "Molstar/mol-util/rx-event-helper";
-import {
-    LoadParams,
-    PDBeVolumes,
-    LigandView,
-    QueryHelper,
-    QueryParam,
-} from "./helpers";
-import {
-    PDBeStructureTools,
-    PDBeSuperpositionStructureTools,
-    PDBeLigandViewStructureTools,
-    //PDBeAfViewStructureTools
-} from "./ui/pdbe-structure-controls";
-import { PDBeViewportControls } from "./ui/pdbe-viewport-controls";
-import { BuiltInTrajectoryFormat } from "Molstar/mol-plugin-state/formats/trajectory";
-import { StateSelection } from "Molstar/mol-state";
-import { StructureFocusRepresentation } from "Molstar/mol-plugin/behavior/dynamic/selection/structure-focus-representation";
-import { PluginSpec } from "Molstar/mol-plugin/spec";
-import { PluginUISpec } from "Molstar/mol-plugin-ui/spec";
-import { InitVolumeStreaming } from "Molstar/mol-plugin/behavior/dynamic/volume-streaming/transformers";
-import { createStructureRepresentationParams } from "Molstar/mol-plugin-state/helpers/structure-representation-params";
-import { subscribeToComponentEvents } from "./subscribe-events";
-import { LeftPanelControls } from "./ui/pdbe-left-panel";
-import { initSuperposition } from "./superposition";
-import { CustomEvents } from "./custom-events";
-import { Asset } from "Molstar/mol-util/assets";
-import { PluginConfig } from "Molstar/mol-plugin/config";
-import { Color } from "Molstar/mol-util/color/color";
-import { StructureComponentManager } from "Molstar/mol-plugin-state/manager/structure/component";
-import { ParamDefinition } from "Molstar/mol-util/param-definition";
-import { PDBeDomainAnnotations } from "./domain-annotations/behavior";
-import { PDBeStructureQualityReport } from "Molstar/extensions/pdbe";
-import { MAQualityAssessment } from "Molstar/extensions/model-archive/quality-assessment/behavior";
-import { clearStructureOverpaint } from "Molstar/mol-plugin-state/helpers/structure-overpaint";
-import { SuperpositionFocusRepresentation } from "./superposition-focus-representation";
-import { SuperpostionViewport } from "./ui/superposition-viewport";
-import {
-    DownloadDensity,
-    EmdbDownloadProvider,
-} from "Molstar/mol-plugin-state/actions/volume";
-import { PDBeViewportControlsVolume } from "./ui/pdbe-viewport-controls-volume";
-import { SelectLoci } from "Molstar/mol-plugin/behavior/dynamic/representation";
-import { FocusLoci } from "molstar/lib/mol-plugin/behavior/dynamic/camera";
-import { Mp4Export } from "Molstar/extensions/mp4-export";
-import { GeometryExport } from "Molstar/extensions/geo-export";
-import { ElementSymbolColorThemeParams } from "Molstar/mol-theme/color/element-symbol";
-import { AnimateModelIndex } from "Molstar/mol-plugin-state/animation/built-in/model-index";
-import { AnimateCameraSpin } from "Molstar/mol-plugin-state/animation/built-in/camera-spin";
-import { AnimateStateSnapshots } from "Molstar/mol-plugin-state/animation/built-in/state-snapshots";
-import { AnimateStateInterpolation } from "Molstar/mol-plugin-state/animation/built-in/state-interpolation";
-import { AnimateStructureSpin } from "Molstar/mol-plugin-state/animation/built-in/spin-structure";
-import { AnimateCameraRock } from "Molstar/mol-plugin-state/animation/built-in/camera-rock";
-import { AnimateAssemblyUnwind } from "Molstar/mol-plugin-state/animation/built-in/assembly-unwind";
+import { createPluginUI, DefaultPluginUISpec, InitParams, DefaultParams } from './spec';
+import { PluginContext } from 'Molstar/mol-plugin/context';
+import { PluginCommands } from 'Molstar/mol-plugin/commands';
+import { PluginStateObject } from 'Molstar/mol-plugin-state/objects';
+import { StateTransform } from 'Molstar/mol-state';
+import { Loci, EmptyLoci } from 'Molstar/mol-model/loci';
+import { RxEventHelper } from 'Molstar/mol-util/rx-event-helper';
+import { LoadParams, PDBeVolumes, LigandView, QueryHelper, QueryParam, AlphafoldView } from './helpers';
+import { PDBeStructureTools, PDBeSuperpositionStructureTools, PDBeLigandViewStructureTools } from './ui/pdbe-structure-controls';
+import { PDBeViewportControls } from './ui/pdbe-viewport-controls';
+import { BuiltInTrajectoryFormat } from 'Molstar/mol-plugin-state/formats/trajectory';
+import { StateSelection } from 'Molstar/mol-state';
+import { StructureFocusRepresentation } from 'Molstar/mol-plugin/behavior/dynamic/selection/structure-focus-representation';
+import { PluginSpec } from 'Molstar/mol-plugin/spec';
+import { PluginUISpec } from 'Molstar/mol-plugin-ui/spec';
+import { InitVolumeStreaming } from 'Molstar/mol-plugin/behavior/dynamic/volume-streaming/transformers';
+import { createStructureRepresentationParams } from 'Molstar/mol-plugin-state/helpers/structure-representation-params';
+import { subscribeToComponentEvents } from './subscribe-events';
+import { LeftPanelControls } from './ui/pdbe-left-panel';
+import { initSuperposition } from './superposition';
+import { CustomEvents } from './custom-events';
+import { Asset } from 'Molstar/mol-util/assets';
+import { PluginConfig } from 'Molstar/mol-plugin/config';
+import { Color } from 'Molstar/mol-util/color/color';
+import { StructureComponentManager } from 'Molstar/mol-plugin-state/manager/structure/component';
+import { ParamDefinition } from 'Molstar/mol-util/param-definition';
+import { PDBeDomainAnnotations } from './domain-annotations/behavior';
+import { PDBeStructureQualityReport } from 'Molstar/extensions/pdbe';
+import { MAQualityAssessment } from 'Molstar/extensions/model-archive/quality-assessment/behavior';
+import { clearStructureOverpaint } from 'Molstar/mol-plugin-state/helpers/structure-overpaint';
+import { SuperpositionFocusRepresentation } from './superposition-focus-representation';
+import { SuperpostionViewport } from './ui/superposition-viewport';
+import { SelectLoci } from 'Molstar/mol-plugin/behavior/dynamic/representation';
+import { FocusLoci } from 'molstar/lib/mol-plugin/behavior/dynamic/camera';
+import { Mp4Export } from 'Molstar/extensions/mp4-export';
+import { GeometryExport } from 'Molstar/extensions/geo-export';
+import { ElementSymbolColorThemeParams } from 'Molstar/mol-theme/color/element-symbol';
+import { AnimateModelIndex } from 'Molstar/mol-plugin-state/animation/built-in/model-index';
+import { AnimateCameraSpin } from 'Molstar/mol-plugin-state/animation/built-in/camera-spin';
+import { AnimateStateSnapshots } from 'Molstar/mol-plugin-state/animation/built-in/state-snapshots';
+import { AnimateStateInterpolation } from 'Molstar/mol-plugin-state/animation/built-in/state-interpolation';
+import { AnimateStructureSpin } from 'Molstar/mol-plugin-state/animation/built-in/spin-structure';
+import { AnimateCameraRock } from 'Molstar/mol-plugin-state/animation/built-in/camera-rock';
+import { AnimateAssemblyUnwind } from 'Molstar/mol-plugin-state/animation/built-in/assembly-unwind';
+import { DownloadDensity, EmdbDownloadProvider } from 'molstar/lib/mol-plugin-state/actions/volume';
 
 require("Molstar/mol-plugin-ui/skin/dark.scss");
 
@@ -201,22 +181,9 @@ class PDBeMolstarPlugin {
             };
         }
 
-        pdbePluginSpec.components = {
-            viewport: {
-                controls: PDBeViewportControlsVolume,
-                view: this.initParams.superposition
-                    ? SuperpostionViewport
-                    : void 0,
-            },
-            remoteState: "none",
-            structureTools: this.initParams.superposition
-                ? PDBeSuperpositionStructureTools
-                : this.initParams.ligandView
-                ? PDBeStructureTools
-                : this.initParams.alphafoldView
-                ? PDBeStructureTools // PDBeAfViewStructureTools
-                : PDBeStructureTools,
-        };
+        if(this.initParams.sequencePanel) {
+            if(pdbePluginSpec.components.controls?.top) delete pdbePluginSpec.components.controls.top;
+        }
 
         pdbePluginSpec.config = [
             [
@@ -695,7 +662,7 @@ class PDBeMolstarPlugin {
 
         this.events.loadComplete.next(true);
     }
-
+    
     applyVisualParams = () => {
         const TagRefs: any = {
             "structure-component-static-polymer": "polymer",
@@ -810,7 +777,21 @@ class PDBeMolstarPlugin {
         return QueryHelper.getInteractivityLoci(params, data);
     }
 
-    normalizeColor(colorVal: any, defaultColor?: Color) {
+    getLociByPLDDT(score: number, structureNumber?: number) {
+        let assemblyRef = this.assemblyRef;
+        if(structureNumber) {
+            assemblyRef = this.plugin.managers.structure.hierarchy.current.structures[structureNumber - 1].cell.transform.ref;
+        }
+
+        if(assemblyRef === '') return EmptyLoci;
+        const data = (this.plugin.state.data.select(assemblyRef)[0].obj as PluginStateObject.Molecule.Structure).data;
+        if(!data) return EmptyLoci;
+        return AlphafoldView.getLociByPLDDT(score, data);
+    }
+
+
+
+    normalizeColor(colorVal: any, defaultColor?: Color){
         let color = Color.fromRgb(170, 170, 170);
         try {
             if (typeof colorVal.r !== "undefined") {
