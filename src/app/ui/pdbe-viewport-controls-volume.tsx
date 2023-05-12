@@ -12,7 +12,7 @@ import { VolumeSourceCustomControls } from './pdbe-volume';
    with new props/state as ViewportControls is not generic. As a workaround, use a custom extended
    state and perform casting when necessary. */
 
-type ViewportControlsState = ViewportControls extends PluginUIComponent<unknown, infer State> ? State : never;
+type ViewportControlsState = ViewportControls extends PluginUIComponent<any, infer State> ? State : never;
 
 interface ControlsExtendedState extends ViewportControlsState {
     isVolumeVisible: boolean,
