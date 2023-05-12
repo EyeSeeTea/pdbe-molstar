@@ -1,3 +1,5 @@
+import { QueryParam } from './helpers';
+
 export function subscribeToComponentEvents(wrapperCtx: any) {
     document.addEventListener('PDB.interactions.click', function(e: any){
         if(typeof e.detail !== 'undefined'){
@@ -70,8 +72,33 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
 
             if(e.detail.feature && e.detail.feature.entityId) highlightQuery['entity_id'] = e.detail.feature.entityId + '';
             if(e.detail.feature && e.detail.feature.bestChainId) highlightQuery['struct_asym_id'] = e.detail.feature.bestChainId;
+            if(e.detail.feature && e.detail.feature.chainId) highlightQuery['struct_asym_id'] = e.detail.feature.chainId;
 
             if(highlightQuery) wrapperCtx.visual.highlight({data: [highlightQuery]});
+        }
+    });
+
+    document.addEventListener('protvista-multiselect', (ev) => {
+        const { detail } = (ev as unknown as ({ detail: MultiSelectDetail | undefined }));
+        if (detail === undefined) return;
+
+        const params = (detail.fragments || []).map((fragment): QueryParam => {
+            return {
+                start_residue_number: (fragment.start),
+                end_residue_number: (fragment.end),
+                color: fragment.color,
+                entity_id: fragment.feature?.entityId,
+                struct_asym_id: fragment.feature?.bestChainId,
+            };
+        });
+
+        if (params.length === 0) {
+            wrapperCtx.visual.clearSelection();
+        } else {
+            wrapperCtx.visual.select({
+                data: params,
+                nonSelectedColor: { r: 255, g: 255, b: 255 },
+            });
         }
     });
 
@@ -95,6 +122,7 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
 
             if(e.detail.feature && e.detail.feature.entityId) highlightQuery['entity_id'] = e.detail.feature.entityId + '';
             if(e.detail.feature && e.detail.feature.bestChainId) highlightQuery['struct_asym_id'] = e.detail.feature.bestChainId;
+            if(e.detail.feature && e.detail.feature.chainId) highlightQuery['struct_asym_id'] = e.detail.feature.chainId;
 
             if(e.detail.feature && e.detail.feature.accession && e.detail.feature.accession.split(' ')[0] === 'Chain' || e.detail.feature.tooltipContent === 'Ligand binding site') {
                 showInteraction = true;
@@ -204,4 +232,18 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
     document.addEventListener('PDB.seqViewer.mouseout', function(e){
         wrapperCtx.visual.clearHighlight();
     });
+}
+
+interface MultiSelectDetail {
+    fragments?: Array<{
+        start: number,
+        end: number,
+        color?: string,
+        chain?: string
+        feature?: {
+            entityId: string,
+            bestChainId: string
+        }
+    }>
+
 }

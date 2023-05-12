@@ -6,8 +6,8 @@
     <title>PDBe Molstar</title>
 
     <!-- Molstar CSS & JS -->
-    <link rel="stylesheet" type="text/css" href="build/pdbe-molstar-1.1.0-dev.4.css">
-    <script type="text/javascript" src="build/pdbe-molstar-plugin-1.1.0-dev.4.js"></script>
+    <link rel="stylesheet" type="text/css" href="build/pdbe-molstar-3.1.0.css">
+    <script type="text/javascript" src="build/pdbe-molstar-plugin-3.1.0.js"></script>
     <style>
       * {
           margin: 0;
@@ -38,6 +38,7 @@
         position:relative;
       }
     </style>
+
   </head>
 
   <body>
@@ -82,23 +83,26 @@
         <button onclick="viewerInstance.visual.select({ data: [{ struct_asym_id: 'B', start_residue_number: 1, end_residue_number: 6, color:{r:255,g:255,b:0}, focus: true }]})">Select & Focus on Chain B:1-6</button><br><br>
         <button onclick="
           var selectSections = [
+            // {
+            //   struct_asym_id: 'B',
+            //   unp_accession: 'P00742', 
+            //   unp_res_num_start: 235, 
+            //   unp_res_num_end: 488, 
+            //   color:{r:255,g:0,b:255},
+            //   // sideChain: true
+            // },
             {
-              struct_asym_id: 'B', 
-              start_residue_number: 8, 
-              end_residue_number: 10, 
+              struct_asym_id: 'C',
+              unp_accession: 'P00742', 
+              unp_res_num_start: 127, 
+              unp_res_num_end: 132, 
               color:{r:255,g:0,b:255},
-              sideChain: true
-            },
-            {
-              struct_asym_id: 'B', 
-              start_residue_number: 2, 
-              end_residue_number: 5, 
-              color:{r:255,g:0,b:0}
+              // sideChain: true
             }
           ]
-          viewerInstance.visual.select({ data: selectSections, nonSelectedColor: {r:255,g:255,b:255}})">Select on Chain B:2-5 & Chain B:8-10</button><br><br>
+          viewerInstance.visual.select({ data: selectSections, nonSelectedColor: {r:255,g:255,b:255}})">Select Uniport</button><br><br>
           
-        <button onclick="viewerInstance.visual.select({ data: [{struct_asym_id: 'B', color:{r:255,g:255,b:0}, focus:true}], nonSelectedColor: {r:255,g:255,b:255} })">Select & Focus on Chain B</button><br><br>
+        <button onclick="viewerInstance.visual.select({ data: [{struct_asym_id: 'A', color:{r:255,g:255,b:0}}], nonSelectedColor: {r:255,g:255,b:255} })">Select & Focus on Chain A</button><br><br>
 
         <button onclick="viewerInstance.visual.clearSelection()">Clear Selection</button><br><br>
 
@@ -114,7 +118,7 @@
         <button onclick="viewerInstance.visual.reset({ camera: true, theme: true })">Camera & Theme</button><br><br>
 
         <strong>Update data</strong><br>
-        <button onclick="viewerInstance.visual.update({moleculeId: '1cbs'})">Update data to create new visual</button><br>
+        <button onclick="viewerInstance.visual.update({moleculeId: '1cbs'}, false)">Update data to create new visual</button><br>
       
       </div>
 
@@ -129,22 +133,63 @@
     </div>
     <script>
 
-      const pdbeUrl = "https://wwwdev.ebi.ac.uk/pdbe/";
-
       //Create plugin instance
       var viewerInstance = new PDBeMolstarPlugin();
   
       //Set options (Checkout available options list in the documentation)
       var options = {
-        moleculeId: '2nnu',
-        hideControls: true
+        moleculeId: '1cbs',
+        // expanded: true,
+        // loadMaps: true,
+        // bgColor: {r:255, g:255, b:255},
+        // hideControls: true,
+        // domainAnnotation: true,
+        // validationAnnotation: true,
+        // subscribeEvents: true
       }
+
+      //Ligand view 
+      // var options = {
+      //   moleculeId: '1cbs',
+      //   ligandView: {label_comp_id: "REA"},
+      //   loadMaps: true,
+      //   expanded: false,
+      //   hideControls: true,
+      //   bgColor: {r:255, g:255, b:255},
+      // }
+
+      //Superposition options (P08083, Q14676, Q5VSL9, P54646)
+      // var options = {
+      //   moleculeId: 'P06213',
+      //   superposition: true,
+      //   expanded: true,
+      //   // hideControls: true,
+      //   bgColor: {r:255, g:255, b:255},
+      //   superpositionParams: { matrixAccession: 'P06213', segment:1 }
+      // }
+
+      // // AF
+      // var options = {
+      //   customData: {
+      //     url: 'https://alphafold.ebi.ac.uk/files/AF-O15552-F1-model_v1.cif',
+      //     format: 'cif'
+      //   },
+      //   bgColor: {r:255, g:255, b:255},
+      //   // hideControls: true,
+      //   alphafoldView: true,
+      //   hideCanvasControls: ['selection', 'animation', 'controlToggle', 'controlInfo']
+      // }
       
       //Get element from HTML/Template to place the viewer 
       var viewerContainer = document.getElementById('myViewer');
   
       //Call render method to display the 3D view
       viewerInstance.render(viewerContainer, options);
+
+      // document.addEventListener('PDB.molstar.mouseover', (e) => { 
+      //   //do something on event 
+      //   console.log(e)
+      // });
       
     </script>
   </body>
