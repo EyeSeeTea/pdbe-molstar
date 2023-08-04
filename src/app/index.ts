@@ -147,7 +147,7 @@ class PDBeMolstarPlugin {
             },
         };
 
-        const { showDebugPanels } = this.initParams
+        const { showDebugPanels } = this.initParams;
 
         pdbePluginSpec.components = {
             // See molstar/mol-plugin-ui/plugin.tsx
@@ -342,6 +342,7 @@ class PDBeMolstarPlugin {
             if (dataSource) {
                 this.load({
                     url: dataSource.url,
+                    label: this.initParams.moleculeId,
                     format: dataSource.format as BuiltInTrajectoryFormat,
                     assemblyId: this.initParams.assemblyId,
                     isBinary: dataSource.isBinary,
@@ -555,6 +556,7 @@ class PDBeMolstarPlugin {
     async load(
         {
             url,
+            label,
             format = "mmcif",
             isBinary = false,
             assemblyId = "",
@@ -579,13 +581,19 @@ class PDBeMolstarPlugin {
         }
 
         const data = await this.plugin.builders.data.download(
-            { url: Asset.Url(url, downloadOptions), isBinary },
+            { url: Asset.Url(url, downloadOptions), label, isBinary },
             { state: { isGhost: true } }
         );
-        const trajectory = await this.plugin.builders.structure.parseTrajectory(
-            data,
-            format
-        );
+        
+        const trajectory = await this.plugin.builders.structure
+            .parseTrajectory(data, format)
+            .then((trajectory) => {
+                trajectory.state?.updateTree;
+                if (trajectory.cell && trajectory.cell.obj)
+                    trajectory.cell.obj.label = url;
+                return trajectory;
+            });
+
 
         if (!isHetView) {
             await this.plugin.builders.structure.hierarchy.applyPreset(
@@ -774,10 +782,10 @@ class PDBeMolstarPlugin {
         }
 
         if (assemblyRef === "") return EmptyLoci;
-        const data = (
-            this.plugin.state.data.select(assemblyRef)[0]
-                .obj as PluginStateObject.Molecule.Structure
-        ).data;
+        const structure = this.plugin.state.data.select(assemblyRef)[0]?.obj as
+            | PluginStateObject.Molecule.Structure
+            | undefined;
+        const data = structure?.data;
         if (!data) return EmptyLoci;
         return QueryHelper.getInteractivityLoci(params, data);
     }
@@ -789,7 +797,10 @@ class PDBeMolstarPlugin {
         }
 
         if(assemblyRef === '') return EmptyLoci;
-        const data = (this.plugin.state.data.select(assemblyRef)[0].obj as PluginStateObject.Molecule.Structure).data;
+        const structure = this.plugin.state.data.select(assemblyRef)[0]?.obj as
+            | PluginStateObject.Molecule.Structure
+            | undefined;
+        const data = structure?.data;
         if(!data) return EmptyLoci;
         return AlphafoldView.getLociByPLDDT(score, data);
     }
