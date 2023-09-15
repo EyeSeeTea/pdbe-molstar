@@ -3,15 +3,19 @@ import { PluginCommands } from 'Molstar/mol-plugin/commands';
 import { MolScriptBuilder as MS } from 'Molstar/mol-script/language/builder';
 import { StateSelection } from 'Molstar/mol-state';
 import Expression from 'Molstar/mol-script/language/expression';
-import { StructureSelection, QueryContext } from 'Molstar/mol-model/structure';
+import { StructureSelection, QueryContext, StructureProperties } from 'Molstar/mol-model/structure';
 import { BuiltInTrajectoryFormat } from 'Molstar/mol-plugin-state/formats/trajectory';
 import { CreateVolumeStreamingInfo } from 'Molstar/mol-plugin/behavior/dynamic/volume-streaming/transformers';
 // import { VolumeStreaming } from '../../mol-plugin/behavior/dynamic/volume-streaming/behavior';
 import { compile } from 'Molstar/mol-script/runtime/query/compiler';
 import { Model, ResidueIndex } from 'Molstar/mol-model/structure';
+import { Queries } from 'Molstar/mol-model/structure';
+import { SIFTSMapping } from 'Molstar/mol-model-props/sequence/sifts-mapping';
+import { StructureQuery } from 'Molstar/mol-model/structure/query/query';
+import { QualityAssessment } from 'Molstar/extensions/model-archive/quality-assessment/prop';
 
 export type SupportedFormats = 'mmcif' | 'bcif' | 'cif' | 'pdb' | 'sdf'
-export type LoadParams = { url: string, format?: BuiltInTrajectoryFormat, assemblyId?: string, isHetView?: boolean, isBinary?: boolean }
+export type LoadParams = { url: string, label?: string, format?: BuiltInTrajectoryFormat, assemblyId?: string, isHetView?: boolean, isBinary?: boolean }
 
 export namespace PDBeVolumes {
 
@@ -19,7 +23,7 @@ export namespace PDBeVolumes {
         const pdbeParams = {...defaultParams};
         pdbeParams.options.behaviorRef = 'volume-streaming' + '' + Math.floor(Math.random() * Math.floor(100));
         pdbeParams.options.emContourProvider = 'pdbe';
-        pdbeParams.options.serverUrl = 'https://www.ebi.ac.uk/pdbe/densities';
+        pdbeParams.options.serverUrl = 'https://www.ebi.ac.uk/pdbe/volume-server';
         pdbeParams.options.channelParams['em'] = {
             opacity: (mapParams && mapParams.em && mapParams.em.opacity) ? mapParams.em.opacity : 0.49,
             wireframe: (mapParams && mapParams.em && mapParams.em.wireframe) ? mapParams.em.wireframe : false
@@ -59,16 +63,37 @@ export namespace PDBeVolumes {
     }
 }
 
+export namespace AlphafoldView {
+    export function getLociByPLDDT(score: number, contextData: any) {
+        const queryExp = MS.struct.modifier.union([
+            MS.struct.modifier.wholeResidues([
+                MS.struct.modifier.union([
+                    MS.struct.generator.atomGroups({
+                        'chain-test': MS.core.rel.eq([MS.ammp('objectPrimitive'), 'atomistic']),
+                        'residue-test': MS.core.rel.gr([QualityAssessment.symbols.pLDDT.symbol(), score]),
+                    })
+                ])
+            ])
+        ])
+
+        const query = compile<StructureSelection>(queryExp);
+        const sel = query(new QueryContext(contextData));
+        return StructureSelection.toLociWithSourceUnits(sel);
+
+    }
+}
+
 export type LigandQueryParam = {
     label_comp_id_list?: any,
     auth_asym_id?: string,
     struct_asym_id?: string,
     label_comp_id?: string,
-    auth_seq_id?: number
+    auth_seq_id?: number,
+    show_all?: boolean
 };
 
 export namespace LigandView {
-    export function query(ligandViewParams: LigandQueryParam): {core: Expression, surroundings: Expression} {
+    export function query(ligandViewParams: LigandQueryParam): {core: Expression.Expression, surroundings: Expression.Expression} {
         let atomGroupsParams: any = {
             'group-by': MS.core.str.concat([MS.struct.atomProperty.core.operatorName(), MS.struct.atomProperty.macromolecular.residueKey()])
         };
@@ -90,10 +115,12 @@ export namespace LigandView {
         }
 
         // Construct core query
-        const core = MS.struct.filter.first([
-            MS.struct.generator.atomGroups(atomGroupsParams)
-        ]);
-
+        const core = ligandViewParams.show_all ? 
+            MS.struct.generator.atomGroups(atomGroupsParams) : 
+            MS.struct.filter.first([
+                MS.struct.generator.atomGroups(atomGroupsParams)
+            ]);
+        
         // Construct surroundings query
         const surroundings = MS.struct.modifier.includeSurroundings({ 0: core, radius: 5, 'as-whole-residues': true });
 
@@ -104,7 +131,7 @@ export namespace LigandView {
 
     }
 
-    export function branchedQuery(params: any): {core: Expression, surroundings: Expression} {
+    export function branchedQuery(params: any): {core: Expression.Expression, surroundings: Expression.Expression} {
         let entityObjArray: any = [];
 
         params.atom_site.forEach((param: any) => {
@@ -115,7 +142,7 @@ export namespace LigandView {
                 entityObjArray.push(qEntities);
         });
 
-        const atmGroupsQueries: Expression[] = [];
+        const atmGroupsQueries: Expression.Expression[] = [];
 
         entityObjArray.forEach((entityObj:any) => {
             atmGroupsQueries.push(MS.struct.generator.atomGroups(entityObj));
@@ -162,99 +189,107 @@ export type QueryParam = {
     focus?: boolean,
     tooltip?: string,
     start?: any,
-    end?: any
+    end?: any,
+    atom_id?: number[],
+    uniprot_accession?: string,
+    uniprot_residue_number?: number,
+    start_uniprot_residue_number?: number,
+    end_uniprot_residue_number?: number
 };
 
 export namespace QueryHelper {
-    export function getQueryObject(params: QueryParam[]): Expression {
+
+    export function getQueryObject(params: QueryParam[], contextData: any): Expression.Expression {
 
         let selections: any = [];
+        let siftMappings: any;
+        let currentAccession: string;
 
         params.forEach(param => {
             let selection: any = {};
             
             // entity
-            if(param.entity_id) selection['entity-test'] = MS.core.rel.eq([MS.struct.atomProperty.macromolecular.label_entity_id(), param.entity_id]);
+            if(param.entity_id) selection['entityTest'] = (l: any) =>  StructureProperties.entity.id(l.element) === param.entity_id;
 
             // chain
             if(param.struct_asym_id){
-                selection['chain-test'] = MS.core.rel.eq([MS.struct.atomProperty.macromolecular.label_asym_id(), param.struct_asym_id]);
+                selection['chainTest'] = (l: any) =>  StructureProperties.chain.label_asym_id(l.element) === param.struct_asym_id;
             }else if(param.auth_asym_id){
-                selection['chain-test'] = MS.core.rel.eq([MS.struct.atomProperty.macromolecular.auth_asym_id(), param.auth_asym_id]);
+                selection['chainTest'] = (l: any) =>  StructureProperties.chain.auth_asym_id(l.element) === param.auth_asym_id;
             }
 
             // residues
             if(param.label_comp_id) {
-                selection['residue-test'] = MS.core.rel.eq([MS.struct.atomProperty.macromolecular.label_comp_id(), param.label_comp_id]);
+                selection['residueTest'] = (l: any) =>  StructureProperties.atom.label_comp_id(l.element) === param.label_comp_id;
+            } else if(param.uniprot_accession && param.uniprot_residue_number) {
+                selection['residueTest'] = (l: any) =>  { 
+                    if(!siftMappings || currentAccession !== param.uniprot_accession) {
+                        siftMappings = SIFTSMapping.Provider.get(contextData.models[0]).value;
+                        currentAccession = param.uniprot_accession!;
+                    }
+                    const rI = StructureProperties.residue.key(l.element);
+                    return param.uniprot_accession === siftMappings.accession[rI] && param.uniprot_residue_number === +siftMappings.num[rI];
+                }
+            } else if(param.uniprot_accession && param.start_uniprot_residue_number && param.end_uniprot_residue_number) {
+                selection['residueTest'] = (l: any) =>  { 
+                    if(!siftMappings || currentAccession !== param.uniprot_accession) {
+                        siftMappings = SIFTSMapping.Provider.get(contextData.models[0]).value;
+                        currentAccession = param.uniprot_accession!;
+                    }
+                    const rI = StructureProperties.residue.key(l.element);
+                    return param.uniprot_accession === siftMappings.accession[rI] && (param.start_uniprot_residue_number! <= +siftMappings.num[rI] && param.end_uniprot_residue_number! >= +siftMappings.num[rI]);
+                }
             } else if(param.residue_number){
-                selection['residue-test'] = MS.core.rel.eq([MS.struct.atomProperty.macromolecular.label_seq_id(), param.residue_number]);
+                selection['residueTest'] = (l: any) =>  StructureProperties.residue.label_seq_id(l.element) === param.residue_number;
             }else if((param.start_residue_number && param.end_residue_number) && (param.end_residue_number > param.start_residue_number)){
-                selection['residue-test'] = MS.core.rel.inRange([MS.struct.atomProperty.macromolecular.label_seq_id(), param.start_residue_number, param.end_residue_number]);
+                selection['residueTest'] = (l: any) =>  {
+                    const labelSeqId = StructureProperties.residue.label_seq_id(l.element);
+                    return labelSeqId >= param.start_residue_number! && labelSeqId <= param.end_residue_number!;
+                };
+
             }else if((param.start_residue_number && param.end_residue_number) && (param.end_residue_number === param.start_residue_number)){
-                selection['residue-test'] = MS.core.rel.eq([MS.struct.atomProperty.macromolecular.label_seq_id(), param.start_residue_number]);
+                selection['residueTest'] = (l: any) =>  StructureProperties.residue.label_seq_id(l.element) === param.start_residue_number;
             }else if(param.auth_seq_id){
-                selection['residue-test'] = MS.core.rel.eq([MS.struct.atomProperty.macromolecular.auth_seq_id(),param.auth_seq_id]);
+                selection['residueTest'] = (l: any) =>  StructureProperties.residue.auth_seq_id(l.element) === param.auth_seq_id;
             }else if(param.auth_residue_number && !param.auth_ins_code_id){
-                selection['residue-test'] = MS.core.rel.eq([MS.struct.atomProperty.macromolecular.auth_seq_id(), param.auth_residue_number]);
+                selection['residueTest'] = (l: any) =>  StructureProperties.residue.auth_seq_id(l.element) === param.auth_residue_number;
             }else if(param.auth_residue_number && param.auth_ins_code_id){
-                selection['residue-test'] = MS.core.rel.eq([
-                    MS.struct.atomProperty.macromolecular.authResidueId(),
-                    MS.struct.type.authResidueId([undefined, param.auth_residue_number, param.auth_ins_code_id])
-                ]);
+                selection['residueTest'] = (l: any) =>  StructureProperties.residue.auth_seq_id(l.element) === param.auth_residue_number;
             }else if((param.start_auth_residue_number && param.end_auth_residue_number) && (param.end_auth_residue_number > param.start_auth_residue_number)){
-                if(param.start_auth_ins_code_id && param.end_auth_ins_code_id){
-                    selection['residue-test'] = MS.core.rel.inRange([
-                        MS.struct.atomProperty.macromolecular.authResidueId(),
-                        MS.struct.type.authResidueId([undefined, param.start_auth_residue_number, param.start_auth_ins_code_id]),
-                        MS.struct.type.authResidueId([undefined, param.start_auth_residue_number, param.start_auth_ins_code_id])
-                    ]);
-                }else{
-                    selection['residue-test'] = MS.core.rel.inRange([
-                        MS.struct.atomProperty.macromolecular.auth_seq_id(), param.start_auth_residue_number, param.end_auth_residue_number]);
-                }
+                selection['residueTest'] = (l: any) =>  {
+                    const authSeqId = StructureProperties.residue.auth_seq_id(l.element);
+                    return authSeqId >= param.start_auth_residue_number! && authSeqId <= param.end_auth_residue_number!;
+                };
             }else if((param.start_auth_residue_number && param.end_auth_residue_number) && (param.end_auth_residue_number === param.start_auth_residue_number)){
-                if(param.start_auth_ins_code_id){
-                    selection['residue-test'] = MS.core.rel.eq([
-                        MS.struct.atomProperty.macromolecular.authResidueId(),
-                        MS.struct.type.authResidueId([undefined, param.start_auth_residue_number, param.start_auth_ins_code_id])
-                    ]);
-                }else{
-                    selection['residue-test'] = MS.core.rel.eq([MS.struct.atomProperty.macromolecular.auth_seq_id(), param.start_auth_residue_number]);
-                }
+                selection['residueTest'] = (l: any) =>  StructureProperties.residue.auth_seq_id(l.element) === param.start_auth_residue_number;
             }
 
             // atoms
             if(param.atoms){
-                let atomsArr: any = [];
-                param.atoms.forEach(atom => {
-                    atomsArr.push(MS.core.rel.eq([MS.ammp('label_atom_id'), atom]));
-                });
-                selection['atom-test'] = MS.core.logic.or(atomsArr);
+                selection['atomTest'] = (l: any) =>  param.atoms!.includes(StructureProperties.atom.label_atom_id(l.element));
+            }
+
+            if(param.atom_id){
+                selection['atomTest'] = (l: any) =>  param.atom_id!.includes(StructureProperties.atom.id(l.element));
             }
 
             selections.push(selection);
         });
 
-        const atmGroupsQueries: Expression[] = [];
-
+        let atmGroupsQueries: any[] = [];
         selections.forEach((selection: any) => {
-            atmGroupsQueries.push(MS.struct.generator.atomGroups(selection));
+            atmGroupsQueries.push(Queries.generators.atoms(selection));
         });
 
-        return MS.struct.modifier.union([
-            atmGroupsQueries.length === 1
-                ? atmGroupsQueries[0]
-                : MS.struct.combinator.merge(atmGroupsQueries.map(q => MS.struct.modifier.union([ q ])))
-        ]);
+        return Queries.combinators.merge(atmGroupsQueries);
     }
 
     export function getInteractivityLoci(params: any, contextData: any){
-        const query = compile<StructureSelection>(QueryHelper.getQueryObject(params));
-        const sel = query(new QueryContext(contextData));
+        const sel = StructureQuery.run(QueryHelper.getQueryObject(params, contextData) as any, contextData);
         return StructureSelection.toLociWithSourceUnits(sel);
     }
 
-    export function getHetLoci(queryExp: Expression, contextData: any){
+    export function getHetLoci(queryExp: Expression.Expression, contextData: any){
         const query = compile<StructureSelection>(queryExp);
         const sel = query(new QueryContext(contextData));
         return StructureSelection.toLociWithSourceUnits(sel);
@@ -262,30 +297,38 @@ export namespace QueryHelper {
 }
 
 export interface ModelInfo {
-    hetNames: string[]
+    hetNames: string[],
+    carbEntityCount: number,
 }
 
 export namespace ModelInfo {
-    export async function get(model: Model): Promise<ModelInfo> {
+    export async function get(model: Model, structures: any): Promise<ModelInfo> {
         const { _rowCount: residueCount } = model.atomicHierarchy.residues;
         const { offsets: residueOffsets } = model.atomicHierarchy.residueAtomSegments;
         const chainIndex = model.atomicHierarchy.chainAtomSegments.index;
 
         const hetNames: ModelInfo['hetNames'] = [];
+        let carbEntityCount: ModelInfo['carbEntityCount'] = 0;
         for (let rI = 0 as ResidueIndex; rI < residueCount; rI++) {
             const cI = chainIndex[residueOffsets[rI]];
             const eI = model.atomicHierarchy.index.getEntityFromChain(cI);
             const entityType = model.entities.data.type.value(eI);
+           
             if (entityType !== 'non-polymer' && entityType !== 'branched') continue;
 
             // const comp_id = model.atomicHierarchy.atoms.label_comp_id.value(rI);
             const comp_id = model.atomicHierarchy.atoms.label_comp_id.value(residueOffsets[rI]);
+            if(entityType === 'branched'){ 
+                carbEntityCount++; 
+            } else {
+                if(hetNames.indexOf(comp_id) === -1) hetNames.push(comp_id); 
+            }                  
 
-            if(hetNames.indexOf(comp_id) === -1) hetNames.push(comp_id);
         }
 
         return {
-            hetNames
+            hetNames,
+            carbEntityCount
         };
     }
 }

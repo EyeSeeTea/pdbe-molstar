@@ -1,12 +1,12 @@
 import { PluginConfig } from 'Molstar/mol-plugin/config';
 import { ControlGroup } from 'Molstar/mol-plugin-ui/controls/common';
 import { ToggleSelectionModeButton } from 'Molstar/mol-plugin-ui/structure/selection';
-import { DownloadScreenshotControls } from './pdbe-screenshot-controls';
+import { DownloadScreenshotControls } from 'Molstar/mol-plugin-ui/viewport/screenshot';
 import { SimpleSettingsControl } from 'Molstar/mol-plugin-ui/viewport/simple-settings';
 import { ViewportControls } from 'Molstar/mol-plugin-ui/viewport';
 import { AutorenewSvg, CameraOutlinedSvg, BuildOutlinedSvg, FullscreenSvg, TuneSvg, CloseSvg, BlurOnSvg } from 'Molstar/mol-plugin-ui/controls/icons';
 import { PluginUIComponent } from 'molstar/lib/mol-plugin-ui/base';
-import { VolumeStreamingControls, VolumeSourceControls } from 'molstar/lib/mol-plugin-ui/structure/volume';
+import { VolumeSourceCustomControls } from './pdbe-volume';
 
 /* We need to add stateful components to PDBeViewportControls, but we cannot extend ViewportControls
    with new props/state as ViewportControls is not generic. As a workaround, use a custom extended
@@ -15,15 +15,20 @@ import { VolumeStreamingControls, VolumeSourceControls } from 'molstar/lib/mol-p
 type ViewportControlsState = ViewportControls extends PluginUIComponent<any, infer State> ? State : never;
 
 interface ControlsExtendedState extends ViewportControlsState {
+    isVolumeVisible: boolean,
     isVolumeExpanded: boolean;
 }
 
 type ExtendedSetState = (cb: (prevState: ControlsExtendedState) => Partial<ControlsExtendedState>) => void;
 
-export class PDBeViewportControls extends ViewportControls {
+export class PDBeViewportControlsVolume extends ViewportControls {
     constructor(props: any, context: any) {
         super(props, context);
-        this.state = { ...this.state, isVolumeExpanded: false } as ViewportControlsState;
+        this.state = {
+            ...this.state,
+            isVolumeExpanded: false,
+            isVolumeVisible: false,
+        } as ViewportControlsState;
     }
 
     toggleVolumeExpanded = () => {
@@ -40,15 +45,41 @@ export class PDBeViewportControls extends ViewportControls {
         return false;
     }
 
-    render() {
-        const isVolumeExpanded = (this.state as ControlsExtendedState).isVolumeExpanded;
-        const customeState: any = this.plugin.customState;
-        let showControlToggle = true;
-        let showControlInfo = true;
-        if(customeState && customeState.initParams && customeState.initParams.hideCanvasControls && customeState.initParams.hideCanvasControls.indexOf('controlToggle') > -1) showControlToggle = false;
-        if(customeState && customeState.initParams && customeState.initParams.hideCanvasControls && customeState.initParams.hideCanvasControls.indexOf('controlInfo') > -1) showControlInfo = false;
+    componentDidMount() {
+        this.subscribe(this.plugin.managers.volume.hierarchy.behaviors.selection, sel => {
+            (this.setState as ExtendedSetState)(() => ({
+                isVolumeVisible: sel.hierarchy.volumes.length > 0
+            }));
+        });
+    }
 
-        return <div className={'msp-viewport-controls'} onMouseMove={this.onMouseMove}>
+    render() {
+        const { isVolumeVisible, isVolumeExpanded } = (this.state as ControlsExtendedState);
+        const customeState: any = this.plugin.customState;
+        let showPDBeLink = false;
+        if(customeState && customeState.initParams && customeState.initParams.moleculeId && customeState.initParams.pdbeLink) showPDBeLink = true;
+        if(customeState && customeState.initParams && customeState.initParams.superposition) showPDBeLink = false;
+        const bgColor = this.isBlack(customeState) ? '#fff' : '#555';
+        const pdbeLink: any = {
+            parentStyle: { width: 'auto' },
+            containerStyle: { position:'absolute', right: '10px', top: '10px' },
+            style: { display: 'inline-block', fontSize: '14px', color: bgColor, borderBottom: 'none', cursor: 'pointer', textDecoration: 'none' },
+            pdbeImg: {
+                src: 'https://www.ebi.ac.uk/pdbe/entry/static/images/logos/PDBe/logo_T_64.png',
+                alt: 'PDBe logo',
+                style: { height: '12px', width: '12px', border:0, position: 'absolute', margin: '4px 0 0 -13px' }
+            }
+        };
+        let vwpBtnsTopMargin = { marginTop: '22px' };
+
+        return <>
+            { showPDBeLink && <div style={pdbeLink.containerStyle}>
+                <a className='msp-pdbe-link' style={pdbeLink.style} target="_blank" href={`https://pdbe.org/${customeState.initParams.moleculeId}`}>
+                    <img src={pdbeLink.pdbeImg.src} alt={pdbeLink.pdbeImg.alt} style={pdbeLink.pdbeImg.style} />
+                    {customeState.initParams.moleculeId}
+                </a>
+            </div> }
+            <div className={'msp-viewport-controls'} onMouseMove={this.onMouseMove} style={showPDBeLink ? vwpBtnsTopMargin : void 0}>
                 <div className='msp-viewport-controls-buttons'>
                     <div className="msp-pdbe-control-reset-camera">
                         <div className='msp-semi-transparent-background' />
@@ -61,15 +92,14 @@ export class PDBeViewportControls extends ViewportControls {
                     <div>
                         <div className='msp-semi-transparent-background' />
                         <div className="msp-pdbe-control-toggle-controls-panel">
-                            {showControlToggle && this.icon(BuildOutlinedSvg, this.toggleControls, 'Toggle Controls Panel', this.plugin.layout.state.showControls)}
+                            {this.icon(BuildOutlinedSvg, this.toggleControls, 'Toggle Controls Panel', this.plugin.layout.state.showControls)}
                         </div>
-                        {this.plugin.config.get(PluginConfig.Viewport.ShowExpand) &&
+                        {this.plugin.config.get(PluginConfig.Viewport.ShowExpand) && (
                             <div className="msp-pdbe-control-toggle-expanded-viewport">
                                 {this.icon(FullscreenSvg, this.toggleExpanded, 'Toggle Expanded Viewport', this.plugin.layout.state.isExpanded)}
-                            </div>}
-
+                            </div>)}
                         <div className="msp-pdbe-control-settings">
-                            {showControlInfo && this.icon(TuneSvg, this.toggleSettingsExpanded, 'Settings / Controls Info', this.state.isSettingsExpanded)}
+                            {this.icon(TuneSvg, this.toggleSettingsExpanded, 'Settings / Controls Info', this.state.isSettingsExpanded)}
                         </div>
                     </div>
                     {this.plugin.config.get(PluginConfig.Viewport.ShowSelectionMode) && <div>
@@ -79,10 +109,12 @@ export class PDBeViewportControls extends ViewportControls {
                         </div>
                     </div>}
 
-                    <div className="msp-pdbe-control-volume">
-                        <div className='msp-semi-transparent-background' />
-                        {this.icon(BlurOnSvg, this.toggleVolumeExpanded, 'Volume', isVolumeExpanded)}
-                    </div>
+                    {isVolumeVisible &&
+                        <div className="msp-pdbe-control-volume">
+                            <div className='msp-semi-transparent-background' />
+                            {this.icon(BlurOnSvg, this.toggleVolumeExpanded, 'Volume', isVolumeExpanded)}
+                        </div>
+                    }
                 </div>
 
                 {this.state.isScreenshotExpanded && <div className='msp-viewport-controls-panel'>
@@ -102,10 +134,10 @@ export class PDBeViewportControls extends ViewportControls {
                 {isVolumeExpanded && <div className='msp-viewport-controls-panel'>
                     <ControlGroup header='Volume' title='Click to close.' initialExpanded={true} hideExpander={true} hideOffset={true} onHeaderClick={this.toggleVolumeExpanded}
                         topRightIcon={CloseSvg} noTopMargin childrenClassName='msp-viewport-controls-panel-controls'>
-                        <VolumeStreamingControls />
-                        <VolumeSourceControls />
+                        <VolumeSourceCustomControls />
                     </ControlGroup>
                 </div>}
             </div>
+        </>;
     }
 }

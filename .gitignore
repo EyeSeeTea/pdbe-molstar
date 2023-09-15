@@ -9,3 +9,5 @@ tsconfig.tsbuildinfo
 *.sublime-workspace
 .idea
 .DS_Store
+
+*.code-workspace

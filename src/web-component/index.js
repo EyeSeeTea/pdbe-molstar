@@ -43,7 +43,13 @@ class PdbeMolstar extends LitElement {
       visualStyle: { type: String, attribute: 'visual-style' },
       hideExpandIcon: { type: Boolean, attribute: 'hide-expand-icon'},
       hideSelectionIcon: { type: Boolean, attribute: 'hide-selection-icon'},
-      hideAnimationIcon: { type: Boolean, attribute: 'hide-animation-icon'}
+      hideAnimationIcon: { type: Boolean, attribute: 'hide-animation-icon'},
+      hideControlToggleIcon: { type: Boolean, attribute: 'hide-control-toggle-icon'},
+      hideControlInfoIcon: { type: Boolean, attribute: 'hide-control-info-icon'},
+      alphafoldView: { type: Boolean, attribute: 'alphafold-view' },
+      lighting: { type: String, attribute: 'lighting' },
+      defaultPreset: { type: String, attribute: 'default-preset' },
+      sequencePanel: { type: Boolean, attribute: 'sequence-panel' }
     };
   }
 
@@ -78,7 +84,9 @@ class PdbeMolstar extends LitElement {
     const hideIconsParamsMap = {
       'hideExpandIcon': 'expand', 
       'hideSelectionIcon': 'selection', 
-      'hideAnimationIcon': 'animation'
+      'hideAnimationIcon': 'animation',
+      'hideControlToggleIcon': 'controlToggle',
+      'hideControlInfoIcon': 'controlInfo'
     };
     const hideIconsParams = Object.keys(hideIconsParamsMap);
 
@@ -130,7 +138,7 @@ class PdbeMolstar extends LitElement {
     const specialProps = ['customDataUrl', 'customDataFormat', 'ligandLabelCompId', 'bgColorR', 'bgColorG', 'bgColorB',
     'ligandAuthAsymId', 'ligandAuthSeqId', 'ligandHydrogens', 'highlightColorR', 'highlightColorG', 'highlightColorB',
     'selectColorR', 'selectColorG', 'selectColorB', 'hidePolymer', 'hideWater', 'hideHet', 'hideCarbs', 'hideNonStandard', 'hideCoarse',
-    'hideExpandIcon', 'hideSelectionIcon', 'hideAnimationIcon'];
+    'hideExpandIcon', 'hideSelectionIcon', 'hideAnimationIcon', 'hideControlToggleIcon', 'hideControlInfoIcon'];
     const componentProps = this.constructor['properties'];
     if(componentProps){
       for(let propName in componentProps){
