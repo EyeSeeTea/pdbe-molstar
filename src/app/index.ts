@@ -45,6 +45,7 @@ import { AnimateCameraRock } from 'Molstar/mol-plugin-state/animation/built-in/c
 import { AnimateAssemblyUnwind } from 'Molstar/mol-plugin-state/animation/built-in/assembly-unwind';
 import { DownloadDensity, EmdbDownloadProvider } from 'molstar/lib/mol-plugin-state/actions/volume';
 import { ControlsWrapper } from 'molstar/lib/mol-plugin-ui/plugin';
+import { PluginToast } from 'molstar/lib/mol-plugin/util/toast';
 
 require("Molstar/mol-plugin-ui/skin/dark.scss");
 
@@ -72,6 +73,7 @@ class PDBeMolstarPlugin {
     defaultRendererProps: any;
     isHighlightColorUpdated = false;
     isSelectedColorUpdated = false;
+    toasts: string[] = [];
 
     async render(target: string | HTMLElement, options: InitParams) {
         if (!options) return;
@@ -356,6 +358,10 @@ class PDBeMolstarPlugin {
 
             // Event handling
             CustomEvents.add(this.plugin, this.targetElement);
+
+            if(!dataSource) { //allow plugin to load without pdbId
+                this.events.loadComplete.next(true);
+            }
         }
     }
 
@@ -737,6 +743,10 @@ class PDBeMolstarPlugin {
                 state: { showControls: isVisible },
             });
         },
+
+        showToast: (toast: PluginToast) => PluginCommands.Toast.Show(this.plugin, toast).then(() => { if(toast.key) this.toasts.push(toast.key); }),
+
+        hideToasts: () => Promise.allSettled(this.toasts.map(key => PluginCommands.Toast.Hide(this.plugin, { key }))).then(() => { this.toasts = []; }),
 
         toggleExpanded: (isExpanded?: boolean) => {
             if (typeof isExpanded === "undefined")
