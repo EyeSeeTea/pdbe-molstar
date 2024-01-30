@@ -1001,6 +1001,10 @@ class PDBeMolstarPlugin {
             this.visual.reset({ selectColor: true });
             // save selection params to optimise clear
             this.selectedParams = params;
+
+            const cameraClipping = this.plugin.canvas3d?.props.cameraClipping;
+            if (cameraClipping) setTimeout(() => PluginCommands.Canvas3D.SetSettings(this.plugin, { settings: { cameraClipping: { ...cameraClipping, radius: 1 } } }), 50);
+
         },
         clearSelection: async (structureNumber?: number) => {
             const structIndex = structureNumber ? structureNumber - 1 : 0;
