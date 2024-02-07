@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e -u
+
+if ! test -z "$(git status -uno --porcelain | grep -v extendProtVista)"; then
+    echo "Uncommited changes"
+    git status
+    exit 1
+fi
+
+version=$(cat package.json | jq -r '.version')
+npm install
+npm run build
+publish_opts=$(echo $version | grep -q beta && echo "--tag beta" || true)
+yarn publish $publish_opts --new-version $version .
+git tag $version -f
+git push
+git push --tags
