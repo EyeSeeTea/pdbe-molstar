@@ -744,9 +744,18 @@ class PDBeMolstarPlugin {
             });
         },
 
-        showToast: (toast: PluginToast) => PluginCommands.Toast.Show(this.plugin, toast).then(() => { if(toast.key) this.toasts.push(toast.key); }),
+        showToast: (toast: PluginToast) => {
+            return PluginCommands.Toast.Show(this.plugin, toast).then(() => {
+                if (toast.key) this.toasts.push(toast.key);
+            })
+        },
 
-        hideToasts: () => Promise.allSettled(this.toasts.map(key => PluginCommands.Toast.Hide(this.plugin, { key }))).then(() => { this.toasts = []; }),
+        hideToasts: () => {
+            return Promise.allSettled(
+                this.toasts.map(key => PluginCommands.Toast.Hide(this.plugin, { key }))).then(() => {
+                    this.toasts = [];
+                })
+        },
 
         toggleExpanded: (isExpanded?: boolean) => {
             if (typeof isExpanded === "undefined")
