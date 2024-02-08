@@ -63,6 +63,7 @@ class PDBeMolstarPlugin {
 
     readonly events = {
         loadComplete: this._ev<boolean>(),
+        updateComplete: this._ev<boolean>(),
     };
 
     plugin: PluginContext;
@@ -1092,6 +1093,7 @@ class PDBeMolstarPlugin {
                 this.load(
                     {
                         url: dataSource.url,
+                        label: this.initParams.moleculeId,
                         format: dataSource.format as BuiltInTrajectoryFormat,
                         assemblyId: this.initParams.assemblyId,
                         isBinary: dataSource.isBinary,
@@ -1099,6 +1101,8 @@ class PDBeMolstarPlugin {
                     fullLoad
                 );
             }
+
+            this.events.updateComplete.next(true);
         },
         visibility: (data: {
             polymer?: boolean;
