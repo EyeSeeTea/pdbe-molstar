@@ -45,6 +45,7 @@ import { AnimateCameraRock } from 'Molstar/mol-plugin-state/animation/built-in/c
 import { AnimateAssemblyUnwind } from 'Molstar/mol-plugin-state/animation/built-in/assembly-unwind';
 import { DownloadDensity, EmdbDownloadProvider } from 'molstar/lib/mol-plugin-state/actions/volume';
 import { ControlsWrapper } from 'molstar/lib/mol-plugin-ui/plugin';
+import { PluginToast } from 'molstar/lib/mol-plugin/util/toast';
 
 require("Molstar/mol-plugin-ui/skin/dark.scss");
 
@@ -73,6 +74,7 @@ class PDBeMolstarPlugin {
     defaultRendererProps: any;
     isHighlightColorUpdated = false;
     isSelectedColorUpdated = false;
+    toasts: string[] = [];
 
     async render(target: string | HTMLElement, options: InitParams) {
         if (!options) return;
@@ -357,6 +359,10 @@ class PDBeMolstarPlugin {
 
             // Event handling
             CustomEvents.add(this.plugin, this.targetElement);
+
+            if(!dataSource) { //allow plugin to load without pdbId
+                this.events.loadComplete.next(true);
+            }
         }
     }
 
@@ -739,6 +745,19 @@ class PDBeMolstarPlugin {
             });
         },
 
+        showToast: (toast: PluginToast) => {
+            return PluginCommands.Toast.Show(this.plugin, toast).then(() => {
+                if (toast.key) this.toasts.push(toast.key);
+            })
+        },
+
+        hideToasts: () => {
+            return Promise.allSettled(
+                this.toasts.map(key => PluginCommands.Toast.Hide(this.plugin, { key }))).then(() => {
+                    this.toasts = [];
+                })
+        },
+
         toggleExpanded: (isExpanded?: boolean) => {
             if (typeof isExpanded === "undefined")
                 isExpanded = !this.plugin.layout.state.isExpanded;
@@ -992,6 +1011,10 @@ class PDBeMolstarPlugin {
             this.visual.reset({ selectColor: true });
             // save selection params to optimise clear
             this.selectedParams = params;
+
+            const cameraClipping = this.plugin.canvas3d?.props.cameraClipping;
+            if (cameraClipping) setTimeout(() => PluginCommands.Canvas3D.SetSettings(this.plugin, { settings: { cameraClipping: { ...cameraClipping, radius: 1 } } }), 50);
+
         },
         clearSelection: async (structureNumber?: number) => {
             const structIndex = structureNumber ? structureNumber - 1 : 0;
