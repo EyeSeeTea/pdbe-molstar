@@ -205,6 +205,12 @@ export function getStructureOptions(state: State) {
     return { options, all };
 }
 
+export function getStructure(state: State, ref: string) {
+    const cell = state.select(ref)[0];
+    if (!ref || !cell || !cell.obj) return Structure.Empty;
+    return (cell.obj as PSO.Molecule.Structure).data;
+}
+
 export type SequenceViewMode = 'single' | 'polymers' | 'all'
 const SequenceViewModeParam = PD.Select<SequenceViewMode>('single', [['single', 'Chain'], ['polymers', 'Polymers'], ['all', 'Everything']]);
 
@@ -251,9 +257,7 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
 
     private getStructure(ref: string) {
         const state = this.plugin.state.data;
-        const cell = state.select(ref)[0];
-        if (!ref || !cell || !cell.obj) return Structure.Empty;
-        return (cell.obj as PSO.Molecule.Structure).data;
+        return getStructure(state, ref);
     }
 
     private getSequenceWrapper(params: SequenceView['params']) {
