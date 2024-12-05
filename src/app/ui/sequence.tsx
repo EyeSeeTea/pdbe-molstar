@@ -224,7 +224,7 @@ type SequenceViewState = {
     mode: SequenceViewMode
 }
 
-export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceViewMode }, SequenceViewState> {
+export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceViewMode, chainSelected?: string }, SequenceViewState> {
     state: SequenceViewState = { structureOptions: { options: [], all: [] }, structure: Structure.Empty, structureRef: '', modelEntityId: '', chainGroupId: -1, operatorKey: '', mode: 'single' };
 
     componentDidMount() {
@@ -293,6 +293,7 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
     }
 
     private getInitialState(): SequenceViewState {
+        alert(this.props.chainSelected);
         const structureOptions = getStructureOptions(this.plugin.state.data);
         const structureRef = structureOptions.options[0][0];
         const structure = this.getStructure(structureRef);

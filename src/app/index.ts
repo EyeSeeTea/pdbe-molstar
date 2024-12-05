@@ -1,5 +1,4 @@
 import { createPluginUI, DefaultPluginUISpec, InitParams, DefaultParams } from './spec';
-import { PluginContext } from 'Molstar/mol-plugin/context';
 import { PluginCommands } from 'Molstar/mol-plugin/commands';
 import { PluginStateObject } from 'Molstar/mol-plugin-state/objects';
 import { StateTransform } from 'Molstar/mol-state';
@@ -45,7 +44,9 @@ import { AnimateAssemblyUnwind } from 'Molstar/mol-plugin-state/animation/built-
 import { DownloadDensity, EmdbDownloadProvider } from 'molstar/lib/mol-plugin-state/actions/volume';
 import { ControlsWrapper } from 'molstar/lib/mol-plugin-ui/plugin';
 import { PluginToast } from 'molstar/lib/mol-plugin/util/toast';
-import { getChainOptions, getModelEntityOptions, getStructure, getStructureOptions, SequenceView } from './ui/sequence';
+import { getChainOptions, getModelEntityOptions, getStructure, getStructureOptions } from './ui/sequence';
+import { initSequenceView } from './ui/sequence-wrapper';
+import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context';
 
 require("Molstar/mol-plugin-ui/skin/dark.scss");
 
@@ -67,7 +68,7 @@ class PDBeMolstarPlugin {
         sequenceComplete: this._ev<any>(),
     };
 
-    plugin: PluginContext;
+    plugin: PluginUIContext;
     initParams: InitParams;
     targetElement: HTMLElement;
     assemblyRef = "";
@@ -159,7 +160,7 @@ class PDBeMolstarPlugin {
                 left: showDebugPanels ? LeftPanelControls : "none",
                 right: showDebugPanels ? ControlsWrapper : "none",
                 top: "none",
-                bottom: SequenceView,
+                bottom: initSequenceView("A").component,
             },
             viewport: {
                 controls: PDBeViewportControls,
@@ -285,6 +286,7 @@ class PDBeMolstarPlugin {
                 : target;
 
         // Create/ Initialise Plugin
+        this.plugin = await createPluginUI(this.targetElement, pdbePluginSpec);
         this.plugin = await createPluginUI(this.targetElement, pdbePluginSpec);
         (this.plugin.customState as any).initParams = { ...this.initParams };
         (this.plugin.customState as any).events = {
@@ -1098,7 +1100,7 @@ class PDBeMolstarPlugin {
             // Load Molecule CIF or coordQuery and Parse
             let dataSource = this.getMoleculeSrcUrl();
             if (dataSource) {
-                this.load(
+                await this.load(
                     {
                         url: dataSource.url,
                         label: this.initParams.moleculeId,
@@ -1111,6 +1113,11 @@ class PDBeMolstarPlugin {
             }
 
             this.events.updateComplete.next(true);
+        },
+        updateSequence: (chainId: string) => {
+            if (this.plugin.spec.components?.controls) {
+                this.plugin.spec.components.controls.bottom = initSequenceView(chainId).component;
+            }
         },
         visibility: (data: {
             polymer?: boolean;
