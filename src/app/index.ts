@@ -44,7 +44,7 @@ import { AnimateAssemblyUnwind } from 'Molstar/mol-plugin-state/animation/built-
 import { DownloadDensity, EmdbDownloadProvider } from 'molstar/lib/mol-plugin-state/actions/volume';
 import { ControlsWrapper } from 'molstar/lib/mol-plugin-ui/plugin';
 import { PluginToast } from 'molstar/lib/mol-plugin/util/toast';
-import { getChainOptions, getModelEntityOptions, getStructure, getStructureOptions } from './ui/sequence';
+import { getEntityChainPairs } from './ui/sequence';
 import { initSequenceView } from './ui/sequence-wrapper';
 import { PluginContext } from 'molstar/lib/mol-plugin/context';
 
@@ -684,13 +684,13 @@ class PDBeMolstarPlugin {
         }
 
         // Sequence Viewer
-        const structureOptions = getStructureOptions(this.plugin.state.data);
-        const structureRef = structureOptions.options[0][0];
-        const structure = getStructure(this.plugin.state.data, structureRef);
-        const entityOptions = getModelEntityOptions(structure, false);
-        const chainsOptions = entityOptions.map(([modelEntityId, _eLabel]) => ({ entityId: modelEntityId, chains: getChainOptions(structure, modelEntityId) }));
-
-        this.events.sequenceComplete.next({ entityOptions: entityOptions, chainOptions: chainsOptions });
+        try {
+            const sequenceOptions = getEntityChainPairs(this.plugin.state.data);
+            this.events.sequenceComplete.next(sequenceOptions);
+        } catch (error) {
+            console.error(error);
+            this.events.sequenceComplete.error(error);
+        }
 
         this.events.loadComplete.next(true);
     }

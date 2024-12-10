@@ -162,6 +162,76 @@ export function getChainOptions(structure: Structure, modelEntityId: string): [n
     return options;
 }
 
+export function getEntityChainPairs(state: State): EntityChainPairs {
+    const ONLY_POLYMERS = true;
+    const structureOptions = getStructureOptions(state);
+    const structureRef = structureOptions.options[0][0];
+    const structure = getStructure(state, structureRef);
+    const entityOptions = getModelEntityOptions(structure, ONLY_POLYMERS);
+    const chainOptions = entityOptions.map(([modelEntityId, _eLabel]) => ({ entityId: modelEntityId, chains: getChainOptions(structure, modelEntityId) }));
+
+    const chainIdOptions = chainOptions.flatMap(c => c.chains.map(([_id, label]) => label.replace(chainIdRegex, "$2")));
+    const duplicates = chainIdOptions.filter((item, index) => chainIdOptions.indexOf(item) !== index);
+    
+    if (duplicates.length > 0) {
+        const unique = Array.from(new Set(duplicates));
+        const duplicationsPerEntityPerDuplicatedChain = unique.map(duplicatedChainId => {
+            const coincidencesPerEntity = chainOptions.flatMap(c => {
+                const coincidencesChain = c.chains.filter(([_id, label]) => label.replace(chainIdRegex, "$2") === duplicatedChainId)
+                    .map(([_id, label]) => label.replace(chainIdRegex, "$1 [auth $2]"));
+                if (coincidencesChain.length > 0) return { entityId: c.entityId, chainsDuplicated: coincidencesChain.join(', ') };
+                else return [];
+            });
+
+            return {duplicatedChainId,coincidencesPerEntity};
+        });
+
+        // Maintenance Note: Should make tests for all PDBs for this
+        throw new Error(duplicationsPerEntityPerDuplicatedChain.map(i => {
+            const coincidencesStr = i.coincidencesPerEntity.map(opt => `EntityId: ${opt.entityId}, Chains: ${opt.chainsDuplicated}`).join("; ");
+            return `Duplicated chains for: ${i.duplicatedChainId} -> ${coincidencesStr}`
+        }).join('\n'));
+    }
+    
+    return { entityOptions, chainOptions };
+}
+
+// const chainIdRegex = /(?:(\w+) ){0,1}(?:\[auth (\w+)\]){0,1}/; if both ids are present this regex will match (which is not intended for later substitutions)
+const chainIdRegex = /^(?:(\w+)\s{0,1}){0,1}(?:\[auth (\w+)\])$/; // $1 structAsymId, $2 chainId (auth) // if both ids will not match (but intended for later substitutions)
+
+export function getEntityIdFromChainId(chainOptions: EntityChainPairs["chainOptions"], chainId: string): string {
+    const entityId = chainOptions.find(c => c.chains.find(([_id, label]) => label.replace(chainIdRegex, "$2") === chainId))?.entityId;
+    if (!entityId) throw new Error(`Entity not found for chain ${chainId}`);
+
+    return entityId;
+}
+
+export function getChainNumberedIdFromChainId(chainOptions: EntityChainPairs["chainOptions"], chainId: string): number {
+    const chainNumberedId = chainOptions.reduce<number | undefined>((numberedId, opt) => {
+        if (typeof numberedId === "number") return numberedId;
+        const chain = opt.chains.find(([_id, label]) => label.replace(chainIdRegex, "$2") === chainId);
+
+        return chain && (chain[0] ?? undefined);
+    }, undefined);
+
+    if (chainNumberedId === undefined) throw new Error(`Chain not found for chain ${chainId}`);
+
+    return chainNumberedId;
+}
+
+export function getChainIdFromNumberedId(chainOptions: EntityChainPairs["chainOptions"], chainNumberedId: string): string {
+    const chainId = chainOptions.reduce<string | undefined>((chainId, opt) => {
+        if (chainId) return chainId;
+        const chain = opt.chains.find(([id]) => String(id) === chainNumberedId);
+
+        return chain && (chain[1]?.replace(chainIdRegex, "$2") ?? undefined);
+    }, undefined);
+
+    if (chainId === undefined) throw new Error(`Chain not found for chain ${chainNumberedId}`);
+
+    return chainId;
+}
+
 export function getOperatorOptions(structure: Structure, modelEntityId: string, chainGroupId: number): [string, string][] {
     const options: [string, string][] = [];
     const l = StructureElement.Location.create(structure);
@@ -215,6 +285,14 @@ export function getStructure(state: State, ref: string) {
 export type SequenceViewMode = 'single' | 'polymers' | 'all'
 const SequenceViewModeParam = PD.Select<SequenceViewMode>('single', [['single', 'Chain'], ['polymers', 'Polymers'], ['all', 'Everything']]);
 
+type EntityChainPairs = {
+    entityOptions: [string, string][];
+    chainOptions: {
+        entityId: string;
+        chains: [number, string][];
+    }[];
+};
+
 type SequenceViewState = {
     structureOptions: { options: [string, string][], all: Structure[] },
     structure: Structure,
@@ -225,17 +303,32 @@ type SequenceViewState = {
     mode: SequenceViewMode
 }
 
-export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceViewMode, plugin: PDBeMolstarPlugin, onChainUpdate?: (chainId:string)=>void }, SequenceViewState> {
+export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceViewMode, plugin: PDBeMolstarPlugin, onChainUpdate?: (chainId: string) => void }, SequenceViewState> {
     state: SequenceViewState = { structureOptions: { options: [], all: [] }, structure: Structure.Empty, structureRef: '', modelEntityId: '', chainGroupId: -1, operatorKey: '', mode: 'single' };
+    entityChainPairs: EntityChainPairs | undefined;
 
     componentDidMount() {
         this.props.plugin.events.chainUpdate.subscribe({
-            next: chain => {
-                console.debug("molstar.events.chainUpdate", chain);
+            next: chainId => {
+                console.debug("molstar.events.chainUpdate", chainId);
+
+                if (!this.entityChainPairs) return;
+
+                const entityId = getEntityIdFromChainId(this.entityChainPairs.chainOptions, chainId)
+                const chainNumber = getChainNumberedIdFromChainId(this.entityChainPairs.chainOptions, chainId)
+
+                console.debug("Updating sequence selected options", entityId, chainNumber);
+
+                this.setParamProps({
+                    name: "entity",
+                    param: this.params.entity,
+                    value: entityId
+                })
+
                 this.setParamProps({
                     name: "chain",
                     param: this.params.chain,
-                    value: 3
+                    value: chainNumber
                 })
             },
             error: err => {
@@ -314,6 +407,13 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
         let modelEntityId = getModelEntityOptions(structure)[0][0];
         let chainGroupId = getChainOptions(structure, modelEntityId)[0][0];
         let operatorKey = getOperatorOptions(structure, modelEntityId, chainGroupId)[0][0];
+
+        try {
+            this.entityChainPairs = getEntityChainPairs(this.plugin.state.data);
+        } catch (error) {
+            console.error(error);
+        }
+
         if (this.state.structure && this.state.structure === structure) {
             modelEntityId = this.state.modelEntityId;
             chainGroupId = this.state.chainGroupId;
@@ -370,7 +470,12 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
                 break;
             case 'chain':
                 state.chainGroupId = p.value;
-                if(this.props.onChainUpdate) this.props.onChainUpdate(String(p.value));
+
+                if (this.props.onChainUpdate && this.entityChainPairs) {
+                    const chainId = getChainIdFromNumberedId(this.entityChainPairs.chainOptions, String(p.value));
+                    this.props.onChainUpdate(chainId);
+                }
+
                 state.operatorKey = getOperatorOptions(state.structure, state.modelEntityId, state.chainGroupId)[0][0];
                 break;
             case 'operator':
