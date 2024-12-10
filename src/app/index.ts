@@ -66,6 +66,7 @@ class PDBeMolstarPlugin {
         loadComplete: this._ev<boolean>(),
         updateComplete: this._ev<boolean>(),
         sequenceComplete: this._ev<any>(),
+        chainChanged: this._ev<string>(),
     };
 
     plugin: PluginContext;
@@ -77,6 +78,8 @@ class PDBeMolstarPlugin {
     isHighlightColorUpdated = false;
     isSelectedColorUpdated = false;
     toasts: string[] = [];
+
+    chainSelected: string | undefined = undefined;
 
     async render(target: string | HTMLElement, options: InitParams) {
         if (!options) return;
@@ -160,7 +163,7 @@ class PDBeMolstarPlugin {
                 left: showDebugPanels ? LeftPanelControls : "none",
                 right: showDebugPanels ? ControlsWrapper : "none",
                 top: "none",
-                bottom: initSequenceView("A").component,
+                bottom: initSequenceView(this, this.initParams.onChainChanged).component,
             },
             viewport: {
                 controls: PDBeViewportControls,
@@ -286,7 +289,6 @@ class PDBeMolstarPlugin {
                 : target;
 
         // Create/ Initialise Plugin
-        this.plugin = await createPluginUI(this.targetElement, pdbePluginSpec);
         this.plugin = await createPluginUI(this.targetElement, pdbePluginSpec);
         (this.plugin.customState as any).initParams = { ...this.initParams };
         (this.plugin.customState as any).events = {
@@ -1115,9 +1117,7 @@ class PDBeMolstarPlugin {
             this.events.updateComplete.next(true);
         },
         updateSequence: (chainId: string) => {
-            // if (this.plugin.spec.components?.controls) {
-            //     this.plugin.spec.components.controls.bottom = initSequenceView(chainId).component;
-            // }
+            this.events.chainChanged.next(chainId);
         },
         visibility: (data: {
             polymer?: boolean;

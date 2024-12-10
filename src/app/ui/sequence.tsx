@@ -23,6 +23,7 @@ import { elementLabel } from 'Molstar/mol-theme/label';
 import { Icon, HelpOutlineSvg } from 'Molstar/mol-plugin-ui/controls/icons';
 import { StructureSelectionManager } from 'Molstar/mol-plugin-state/manager/structure/selection';
 import { arrayEqual } from 'Molstar/mol-util/array';
+import { PDBeMolstarPlugin } from '..';
 
 const MaxDisplaySequenceLength = 5000;
 // TODO: add virtualized Select controls (at best with a search box)?
@@ -224,10 +225,24 @@ type SequenceViewState = {
     mode: SequenceViewMode
 }
 
-export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceViewMode, chainSelected?: string }, SequenceViewState> {
+export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceViewMode, plugin: PDBeMolstarPlugin, onChainChanged?: (chainId:string)=>void }, SequenceViewState> {
     state: SequenceViewState = { structureOptions: { options: [], all: [] }, structure: Structure.Empty, structureRef: '', modelEntityId: '', chainGroupId: -1, operatorKey: '', mode: 'single' };
 
     componentDidMount() {
+        this.props.plugin.events.chainChanged.subscribe({
+            next: chain => {
+                console.debug("molstar.events.chainChanged", chain);
+                this.setParamProps({
+                    name: "chain",
+                    param: this.params.chain,
+                    value: 3
+                })
+            },
+            error: err => {
+                console.error(err);
+            },
+        });
+
         if (this.plugin.state.data.select(StateSelection.Generators.rootsOfType(PSO.Molecule.Structure)).length > 0) this.setState(this.getInitialState());
 
         this.subscribe(this.plugin.state.events.object.updated, ({ ref, obj }) => {
@@ -293,7 +308,6 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
     }
 
     private getInitialState(): SequenceViewState {
-        alert(this.props.chainSelected);
         const structureOptions = getStructureOptions(this.plugin.state.data);
         const structureRef = structureOptions.options[0][0];
         const structure = this.getStructure(structureRef);
@@ -356,6 +370,7 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
                 break;
             case 'chain':
                 state.chainGroupId = p.value;
+                if(this.props.onChainChanged) this.props.onChainChanged(String(p.value));
                 state.operatorKey = getOperatorOptions(state.structure, state.modelEntityId, state.chainGroupId)[0][0];
                 break;
             case 'operator':
