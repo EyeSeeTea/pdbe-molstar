@@ -225,13 +225,13 @@ type SequenceViewState = {
     mode: SequenceViewMode
 }
 
-export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceViewMode, plugin: PDBeMolstarPlugin, onChainChanged?: (chainId:string)=>void }, SequenceViewState> {
+export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceViewMode, plugin: PDBeMolstarPlugin, onChainUpdate?: (chainId:string)=>void }, SequenceViewState> {
     state: SequenceViewState = { structureOptions: { options: [], all: [] }, structure: Structure.Empty, structureRef: '', modelEntityId: '', chainGroupId: -1, operatorKey: '', mode: 'single' };
 
     componentDidMount() {
-        this.props.plugin.events.chainChanged.subscribe({
+        this.props.plugin.events.chainUpdate.subscribe({
             next: chain => {
-                console.debug("molstar.events.chainChanged", chain);
+                console.debug("molstar.events.chainUpdate", chain);
                 this.setParamProps({
                     name: "chain",
                     param: this.params.chain,
@@ -370,7 +370,7 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
                 break;
             case 'chain':
                 state.chainGroupId = p.value;
-                if(this.props.onChainChanged) this.props.onChainChanged(String(p.value));
+                if(this.props.onChainUpdate) this.props.onChainUpdate(String(p.value));
                 state.operatorKey = getOperatorOptions(state.structure, state.modelEntityId, state.chainGroupId)[0][0];
                 break;
             case 'operator':

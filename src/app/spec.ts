@@ -68,7 +68,7 @@ export type InitParams = {
     selectColor?: {r: number, g: number, b: number}, highlightColor?: {r: number, g: number, b: number}, superpositionParams?: {matrixAccession?: string, segment?: number, cluster?: number[], superposeCompleteCluster?: boolean, ligandView?: boolean},
     hideStructure?: ['polymer', 'het', 'water', 'carbs', 'nonStandard', 'coarse'], visualStyle?: 'cartoon' | 'ball-and-stick', encoding: 'cif' | 'bcif'
     granularity?: Loci.Granularity, selection?: { data: QueryParam[], nonSelectedColor?: any, clearPrevious?: boolean }, mapSettings: any, [key: string]: any;
-    onChainChanged?: (chainId: string) => void;
+    onChainUpdate?: (chainId: string) => void;
 }
 
 export const DefaultParams: InitParams = {
@@ -106,5 +106,6 @@ export const DefaultParams: InitParams = {
     landscape: false,
     subscribeEvents: false,
     alphafoldView: false,
-    sequencePanel: false
+    sequencePanel: false,
+    onChainUpdate: undefined,
 };

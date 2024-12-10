@@ -66,7 +66,7 @@ class PDBeMolstarPlugin {
         loadComplete: this._ev<boolean>(),
         updateComplete: this._ev<boolean>(),
         sequenceComplete: this._ev<any>(),
-        chainChanged: this._ev<string>(),
+        chainUpdate: this._ev<string>(),
     };
 
     plugin: PluginContext;
@@ -163,7 +163,7 @@ class PDBeMolstarPlugin {
                 left: showDebugPanels ? LeftPanelControls : "none",
                 right: showDebugPanels ? ControlsWrapper : "none",
                 top: "none",
-                bottom: initSequenceView(this, this.initParams.onChainChanged).component,
+                bottom: initSequenceView(this, this.initParams.onChainUpdate).component,
             },
             viewport: {
                 controls: PDBeViewportControls,
@@ -1116,9 +1116,7 @@ class PDBeMolstarPlugin {
 
             this.events.updateComplete.next(true);
         },
-        updateSequence: (chainId: string) => {
-            this.events.chainChanged.next(chainId);
-        },
+        updateChain: (chainId: string) => this.events.chainUpdate.next(chainId),
         visibility: (data: {
             polymer?: boolean;
             het?: boolean;
