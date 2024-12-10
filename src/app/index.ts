@@ -46,7 +46,7 @@ import { ControlsWrapper } from 'molstar/lib/mol-plugin-ui/plugin';
 import { PluginToast } from 'molstar/lib/mol-plugin/util/toast';
 import { getChainOptions, getModelEntityOptions, getStructure, getStructureOptions } from './ui/sequence';
 import { initSequenceView } from './ui/sequence-wrapper';
-import { PluginUIContext } from 'molstar/lib/mol-plugin-ui/context';
+import { PluginContext } from 'molstar/lib/mol-plugin/context';
 
 require("Molstar/mol-plugin-ui/skin/dark.scss");
 
@@ -1115,9 +1115,9 @@ class PDBeMolstarPlugin {
             this.events.updateComplete.next(true);
         },
         updateSequence: (chainId: string) => {
-            if (this.plugin.spec.components?.controls) {
-                this.plugin.spec.components.controls.bottom = initSequenceView(chainId).component;
-            }
+            // if (this.plugin.spec.components?.controls) {
+            //     this.plugin.spec.components.controls.bottom = initSequenceView(chainId).component;
+            // }
         },
         visibility: (data: {
             polymer?: boolean;
