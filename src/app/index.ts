@@ -68,7 +68,7 @@ class PDBeMolstarPlugin {
         sequenceComplete: this._ev<any>(),
     };
 
-    plugin: PluginUIContext;
+    plugin: PluginContext;
     initParams: InitParams;
     targetElement: HTMLElement;
     assemblyRef = "";
