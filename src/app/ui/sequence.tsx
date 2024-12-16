@@ -304,10 +304,13 @@ type SequenceViewState = {
 }
 
 export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceViewMode, plugin: PDBeMolstarPlugin, onChainUpdate?: (chainId: string) => void }, SequenceViewState> {
+    onChainUpdate?: (chainId: string) => void;
     state: SequenceViewState = { structureOptions: { options: [], all: [] }, structure: Structure.Empty, structureRef: '', modelEntityId: '', chainGroupId: -1, operatorKey: '', mode: 'single' };
     entityChainPairs: EntityChainPairs | undefined;
 
     componentDidMount() {
+        this.onChainUpdate = this.props.onChainUpdate;
+
         this.props.plugin.events.chainUpdate.subscribe({
             next: chainId => {
                 console.debug("molstar.events.chainUpdate", chainId);
@@ -330,6 +333,16 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
                     param: this.params.chain,
                     value: chainNumber
                 })
+            },
+            error: err => {
+                console.error(err);
+            },
+        });
+
+        this.props.plugin.events.dependencyChanged.onChainUpdate.subscribe({
+            next: callback => {
+                console.debug("molstar.events.dependencyChanged.onChainUpdate");
+                this.onChainUpdate = callback;
             },
             error: err => {
                 console.error(err);
@@ -471,9 +484,9 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
             case 'chain':
                 state.chainGroupId = p.value;
 
-                if (this.props.onChainUpdate && this.entityChainPairs) {
+                if (this.onChainUpdate && this.entityChainPairs) {
                     const chainId = getChainIdFromNumberedId(this.entityChainPairs.chainOptions, String(p.value));
-                    this.props.onChainUpdate(chainId);
+                    this.onChainUpdate(chainId);
                 }
 
                 state.operatorKey = getOperatorOptions(state.structure, state.modelEntityId, state.chainGroupId)[0][0];

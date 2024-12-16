@@ -67,6 +67,9 @@ class PDBeMolstarPlugin {
         updateComplete: this._ev<boolean>(),
         sequenceComplete: this._ev<any>(),
         chainUpdate: this._ev<string>(),
+        dependencyChanged: {
+            onChainUpdate: this._ev<(chainId: string)=>void>()
+        },
     };
 
     plugin: PluginContext;
@@ -1117,6 +1120,9 @@ class PDBeMolstarPlugin {
             this.events.updateComplete.next(true);
         },
         updateChain: (chainId: string) => this.events.chainUpdate.next(chainId),
+        updateDependency: {
+            onChainUpdate: (callback: (chainId: string) => void) => this.events.dependencyChanged.onChainUpdate.next(callback),
+        },
         visibility: (data: {
             polymer?: boolean;
             het?: boolean;
