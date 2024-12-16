@@ -66,7 +66,8 @@ class PDBeMolstarPlugin {
         loadComplete: this._ev<boolean>(),
         updateComplete: this._ev<boolean>(),
         sequenceComplete: this._ev<any>(),
-        chainUpdate: this._ev<string>(),
+        chainUpdate: this._ev<string>(), // chainId
+        ligandUpdate: this._ev<{ligandId: string, chainId: string}>(),
         dependencyChanged: {
             onChainUpdate: this._ev<(chainId: string)=>void>()
         },
@@ -688,7 +689,8 @@ class PDBeMolstarPlugin {
 
         // Sequence Viewer
         try {
-            const sequenceOptions = getEntityChainPairs(this.plugin.state.data);
+            const ONLY_POLYMERS = true;
+            const sequenceOptions = getEntityChainPairs(this.plugin.state.data, ONLY_POLYMERS);
             this.events.sequenceComplete.next(sequenceOptions);
         } catch (error) {
             console.error(error);
@@ -1120,6 +1122,7 @@ class PDBeMolstarPlugin {
             this.events.updateComplete.next(true);
         },
         updateChain: (chainId: string) => this.events.chainUpdate.next(chainId),
+        updateLigand: (options: {chainId: string; ligandId: string}) => this.events.ligandUpdate.next(options),
         updateDependency: {
             onChainUpdate: (callback: (chainId: string) => void) => this.events.dependencyChanged.onChainUpdate.next(callback),
         },

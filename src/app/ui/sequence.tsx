@@ -5,11 +5,12 @@
  * @author David Sehnal <david.sehnal@gmail.com>
  */
 
+import _ from 'lodash';
 import * as React from 'react';
 import { PluginUIComponent } from 'Molstar/mol-plugin-ui/base';
 import { PluginStateObject as PSO } from 'Molstar/mol-plugin-state/objects';
 import { Sequence } from 'Molstar/mol-plugin-ui/sequence/sequence';
-import { Structure, StructureElement, StructureProperties as SP, Unit } from 'Molstar/mol-model/structure';
+import { Structure, StructureElement, StructureProperties as SP, Unit, StructureProperties } from 'Molstar/mol-model/structure';
 import { SequenceWrapper } from 'Molstar/mol-plugin-ui/sequence/wrapper';
 import { PolymerSequenceWrapper } from 'Molstar/mol-plugin-ui/sequence/polymer';
 import { MarkerAction } from 'Molstar/mol-util/marker-action';
@@ -98,6 +99,33 @@ export function getSequenceWrapper(state: { structure: Structure, modelEntityId:
     }
 }
 
+export function getLigand(options: { chainId: string; ligandId: string }, structure: Structure) {
+    const ligands = structure.units.flatMap((unit: Unit) =>
+        Array.from(unit.elements).flatMap(element => {
+            const location = {
+                kind: "element-location" as const,
+                structure,
+                unit,
+                element,
+            };
+
+            const compIds = StructureProperties.residue.microheterogeneityCompIds(location);
+            const type = StructureProperties.residue.group_PDB(location);
+            const authSeqId = StructureProperties.residue.auth_seq_id(location);
+            const chainId = StructureProperties.chain.auth_asym_id(location);
+            const structAsymId = StructureProperties.chain.label_asym_id(location);
+
+            // Debug ligands without previous filtering
+            // const ligand = [compIds[0], authSeqId].join("-");
+
+            return { type, compIds, authSeqId, chainId, structAsymId, id: [compIds[0], authSeqId].join("-") };
+        })
+    );
+
+    const groupedLigandsById = _.groupBy(ligands, 'id');
+    return groupedLigandsById[options.ligandId].filter(ligand => ligand.chainId === options.chainId)[0];
+}
+
 export function getModelEntityOptions(structure: Structure, polymersOnly = false): [string, string][] {
     const options: [string, string][] = [];
     const l = StructureElement.Location.create(structure);
@@ -162,28 +190,27 @@ export function getChainOptions(structure: Structure, modelEntityId: string): [n
     return options;
 }
 
-export function getEntityChainPairs(state: State): EntityChainPairs {
-    const ONLY_POLYMERS = true;
+export function getEntityChainPairs(state: State, polymers: boolean): EntityChainPairs {
     const structureOptions = getStructureOptions(state);
     const structureRef = structureOptions.options[0][0];
     const structure = getStructure(state, structureRef);
-    const entityOptions = getModelEntityOptions(structure, ONLY_POLYMERS);
+    const entityOptions = getModelEntityOptions(structure, polymers);
     const chainOptions = entityOptions.map(([modelEntityId, _eLabel]) => ({ entityId: modelEntityId, chains: getChainOptions(structure, modelEntityId) }));
 
-    const chainIdOptions = chainOptions.flatMap(c => c.chains.map(([_id, label]) => label.replace(chainIdRegex, "$2")));
+    const chainIdOptions = chainOptions.flatMap(c => c.chains.map(([_id, label]) => label.replace(chainIdRegex, "$1$2")));
     const duplicates = chainIdOptions.filter((item, index) => chainIdOptions.indexOf(item) !== index);
-    
+
     if (duplicates.length > 0) {
         const unique = Array.from(new Set(duplicates));
         const duplicationsPerEntityPerDuplicatedChain = unique.map(duplicatedChainId => {
             const coincidencesPerEntity = chainOptions.flatMap(c => {
-                const coincidencesChain = c.chains.filter(([_id, label]) => label.replace(chainIdRegex, "$2") === duplicatedChainId)
+                const coincidencesChain = c.chains.filter(([_id, label]) => label.replace(chainIdRegex, "$1$2") === duplicatedChainId)
                     .map(([_id, label]) => label.replace(chainIdRegex, "$1 [auth $2]"));
                 if (coincidencesChain.length > 0) return { entityId: c.entityId, chainsDuplicated: coincidencesChain.join(', ') };
                 else return [];
             });
 
-            return {duplicatedChainId,coincidencesPerEntity};
+            return { duplicatedChainId, coincidencesPerEntity };
         });
 
         // Maintenance Note: Should make tests for all PDBs for this
@@ -192,12 +219,38 @@ export function getEntityChainPairs(state: State): EntityChainPairs {
             return `Duplicated chains for: ${i.duplicatedChainId} -> ${coincidencesStr}`
         }).join('\n'));
     }
-    
+
+    // NOTE: REMOVE. INTENDED TO GO INTO COMMIT ONLY FOR CHAIN ID FOR FUTURE TESTS
+
+    // const chainIdOptions = chainOptions.flatMap(c => c.chains.map(([_id, label]) => label.replace(chainIdRegex, "$2")));
+    // const duplicates = chainIdOptions.filter((item, index) => chainIdOptions.indexOf(item) !== index);
+
+    // if (duplicates.length > 0) {
+    //     const unique = Array.from(new Set(duplicates));
+    //     const duplicationsPerEntityPerDuplicatedChain = unique.map(duplicatedChainId => {
+    //         const coincidencesPerEntity = chainOptions.flatMap(c => {
+    //             const coincidencesChain = c.chains.filter(([_id, label]) => label.replace(chainIdRegex, "$2") === duplicatedChainId)
+    //                 .map(([_id, label]) => label.replace(chainIdRegex, "$1 [auth $2]"));
+    //             if (coincidencesChain.length > 0) return { entityId: c.entityId, chainsDuplicated: coincidencesChain.join(', ') };
+    //             else return [];
+    //         });
+
+    //         return { duplicatedChainId, coincidencesPerEntity };
+    //     });
+
+    //     // Maintenance Note: Should make tests for all PDBs for this
+    //     throw new Error(duplicationsPerEntityPerDuplicatedChain.map(i => {
+    //         const coincidencesStr = i.coincidencesPerEntity.map(opt => `EntityId: ${opt.entityId}, Chains: ${opt.chainsDuplicated}`).join("; ");
+    //         return `Duplicated chains for: ${i.duplicatedChainId} -> ${coincidencesStr}`
+    //     }).join('\n'));
+    // }
+
     return { entityOptions, chainOptions };
 }
 
 // const chainIdRegex = /(?:(\w+) ){0,1}(?:\[auth (\w+)\]){0,1}/; if both ids are present this regex will match (which is not intended for later substitutions)
-const chainIdRegex = /^(?:(\w+)\s{0,1}){0,1}(?:\[auth (\w+)\])$/; // $1 structAsymId, $2 chainId (auth) // if both ids will not match (but intended for later substitutions)
+// With next regex, if some id is not present will not match, but intended for later substitutions; because if there is no id is because they are the same or there is no struct asym id for formats like "pdb" or "ent"
+const chainIdRegex = /^(?:(\w+)\s{0,1}){0,1}(?:\[auth (\w+)\])$/; // $1 structAsymId, $2 chainId (auth)
 
 export function getEntityIdFromChainId(chainOptions: EntityChainPairs["chainOptions"], chainId: string): string {
     const entityId = chainOptions.find(c => c.chains.find(([_id, label]) => label.replace(chainIdRegex, "$2") === chainId))?.entityId;
@@ -231,6 +284,27 @@ export function getChainIdFromNumberedId(chainOptions: EntityChainPairs["chainOp
 
     return chainId;
 }
+
+export function getEntityIdFromStructAsymId(chainOptions: EntityChainPairs["chainOptions"], structAsymId: string): string {
+    const entityId = chainOptions.find(c => c.chains.find(([_id, label]) => label.replace(chainIdRegex, "$1") === structAsymId))?.entityId;
+    if (!entityId) throw new Error(`Entity not found for chain STRUCT_ASYM_ID ${structAsymId}`);
+
+    return entityId;
+}
+
+export function getChainNumberedIdFromStructAsymId(chainOptions: EntityChainPairs["chainOptions"], structAsymId: string): number {
+    const chainNumberedId = chainOptions.reduce<number | undefined>((numberedId, opt) => {
+        if (typeof numberedId === "number") return numberedId;
+        const chain = opt.chains.find(([_id, label]) => label.replace(chainIdRegex, "$1") === structAsymId);
+
+        return chain && (chain[0] ?? undefined);
+    }, undefined);
+
+    if (chainNumberedId === undefined) throw new Error(`Chain not found for chain STRUCT_ASYM_ID ${structAsymId}`);
+
+    return chainNumberedId;
+}
+
 
 export function getOperatorOptions(structure: Structure, modelEntityId: string, chainGroupId: number): [string, string][] {
     const options: [string, string][] = [];
@@ -304,12 +378,13 @@ type SequenceViewState = {
 }
 
 export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceViewMode, plugin: PDBeMolstarPlugin, onChainUpdate?: (chainId: string) => void }, SequenceViewState> {
-    onChainUpdate?: (chainId: string) => void;
+    updateViewerChain?: (chainId: string) => void;
     state: SequenceViewState = { structureOptions: { options: [], all: [] }, structure: Structure.Empty, structureRef: '', modelEntityId: '', chainGroupId: -1, operatorKey: '', mode: 'single' };
     entityChainPairs: EntityChainPairs | undefined;
+    notPolymerEntityChainPairs: EntityChainPairs | undefined;
 
     componentDidMount() {
-        this.onChainUpdate = this.props.onChainUpdate;
+        this.updateViewerChain = this.props.onChainUpdate;
 
         this.props.plugin.events.chainUpdate.subscribe({
             next: chainId => {
@@ -339,10 +414,44 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
             },
         });
 
+        this.props.plugin.events.ligandUpdate.subscribe({
+            next: (options) => {
+                console.debug("molstar.events.ligandUpdate", options);
+
+                if (!this.entityChainPairs) return;
+                if (!this.notPolymerEntityChainPairs) return;
+
+                const ligand = getLigand(options, this.state.structure);
+
+                if (!ligand) return;
+                if (!ligand.structAsymId) return;
+
+                const entityId = getEntityIdFromStructAsymId(this.notPolymerEntityChainPairs.chainOptions, ligand.structAsymId);
+                const chainNumber = getChainNumberedIdFromStructAsymId(this.notPolymerEntityChainPairs.chainOptions, ligand.structAsymId);
+
+                console.debug("Updating sequence selected options", entityId, chainNumber);
+
+                this.setParamProps({
+                    name: "entity",
+                    param: this.params.entity,
+                    value: entityId
+                })
+
+                this.setParamProps({
+                    name: "chain",
+                    param: this.params.chain,
+                    value: chainNumber
+                })
+            },
+            error: err => {
+                console.error(err);
+            },
+        });
+
         this.props.plugin.events.dependencyChanged.onChainUpdate.subscribe({
             next: callback => {
                 console.debug("molstar.events.dependencyChanged.onChainUpdate");
-                this.onChainUpdate = callback;
+                this.updateViewerChain = callback;
             },
             error: err => {
                 console.error(err);
@@ -422,7 +531,9 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
         let operatorKey = getOperatorOptions(structure, modelEntityId, chainGroupId)[0][0];
 
         try {
-            this.entityChainPairs = getEntityChainPairs(this.plugin.state.data);
+            const ONLY_POLYMERS = true;
+            this.entityChainPairs = getEntityChainPairs(this.plugin.state.data, ONLY_POLYMERS);
+            this.notPolymerEntityChainPairs = getEntityChainPairs(this.plugin.state.data, !ONLY_POLYMERS);
         } catch (error) {
             console.error(error);
         }
@@ -479,14 +590,30 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
             case 'entity':
                 state.modelEntityId = p.value;
                 state.chainGroupId = getChainOptions(state.structure, state.modelEntityId)[0][0];
+
+                if (this.updateViewerChain && this.entityChainPairs) {
+                    try {
+                        const chainId = getChainIdFromNumberedId(this.entityChainPairs.chainOptions, String(state.chainGroupId));
+                        this.updateViewerChain(chainId);
+                    } catch (error) {
+                        console.debug("Chain to change is not in one of the polymers.", error);
+                        // Ligand ¿? + Chain
+                    }
+                }
+
                 state.operatorKey = getOperatorOptions(state.structure, state.modelEntityId, state.chainGroupId)[0][0];
                 break;
             case 'chain':
                 state.chainGroupId = p.value;
 
-                if (this.onChainUpdate && this.entityChainPairs) {
-                    const chainId = getChainIdFromNumberedId(this.entityChainPairs.chainOptions, String(p.value));
-                    this.onChainUpdate(chainId);
+                if (this.updateViewerChain && this.entityChainPairs) {
+                    try {
+                        const chainId = getChainIdFromNumberedId(this.entityChainPairs.chainOptions, String(p.value));
+                        this.updateViewerChain(chainId);
+                    } catch (error) {
+                        console.debug("Chain to change is not in one of the polymers.", error);
+                        // Ligand ¿? + Chain
+                    }
                 }
 
                 state.operatorKey = getOperatorOptions(state.structure, state.modelEntityId, state.chainGroupId)[0][0];
