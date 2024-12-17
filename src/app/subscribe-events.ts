@@ -65,8 +65,8 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
             // Create query object from event data
             if(e.detail.start && e.detail.end){
                 highlightQuery = {
-                    start_residue_number: parseInt(e.detail.start),
-                    end_residue_number: parseInt(e.detail.end)
+                    start_auth_residue_number: parseInt(e.detail.start),
+                    end_auth_residue_number: parseInt(e.detail.end)
                 };
             }
 
@@ -84,8 +84,8 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
 
         const params = (detail.fragments || []).map((fragment): QueryParam => {
             return {
-                start_residue_number: (fragment.start),
-                end_residue_number: (fragment.end),
+                start_auth_residue_number: (fragment.start),
+                end_auth_residue_number: (fragment.end),
                 color: fragment.color,
                 entity_id: fragment.feature?.entityId,
                 auth_asym_id: fragment.feature?.bestChainId,
@@ -115,8 +115,8 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
             // Create query object from event data
             if(e.detail.start && e.detail.end){
                 highlightQuery = {
-                    start_residue_number: parseInt(e.detail.start),
-                    end_residue_number: parseInt(e.detail.end)
+                    start_auth_residue_number: parseInt(e.detail.start),
+                    end_auth_residue_number: parseInt(e.detail.end)
                 };
             }
 
