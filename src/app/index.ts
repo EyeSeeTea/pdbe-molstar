@@ -67,9 +67,9 @@ class PDBeMolstarPlugin {
         updateComplete: this._ev<boolean>(),
         sequenceComplete: this._ev<any>(),
         chainUpdate: this._ev<string>(), // chainId
-        ligandUpdate: this._ev<{ligandId: string, chainId: string}>(),
+        ligandUpdate: this._ev<{ ligandId: string, chainId: string }>(),
         dependencyChanged: {
-            onChainUpdate: this._ev<(chainId: string)=>void>()
+            onChainUpdate: this._ev<(chainId: string) => void>()
         },
     };
 
@@ -352,7 +352,7 @@ class PDBeMolstarPlugin {
             // Load Molecule CIF or coordQuery and Parse
             let dataSource = this.getMoleculeSrcUrl();
             if (dataSource) {
-                this.load({
+                await this.load({
                     url: dataSource.url,
                     label: this.initParams.moleculeId,
                     format: dataSource.format as BuiltInTrajectoryFormat,
@@ -1122,7 +1122,7 @@ class PDBeMolstarPlugin {
             this.events.updateComplete.next(true);
         },
         updateChain: (chainId: string) => this.events.chainUpdate.next(chainId),
-        updateLigand: (options: {chainId: string; ligandId: string}) => this.events.ligandUpdate.next(options),
+        updateLigand: (options: { chainId: string; ligandId: string }) => this.events.ligandUpdate.next(options),
         updateDependency: {
             onChainUpdate: (callback: (chainId: string) => void) => this.events.dependencyChanged.onChainUpdate.next(callback),
         },
