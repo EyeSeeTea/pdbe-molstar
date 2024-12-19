@@ -285,6 +285,20 @@ export function getChainIdFromNumberedId(chainOptions: EntityChainPairs["chainOp
     return chainId;
 }
 
+export function getStructAsymIdFromChainId(chainOptions: EntityChainPairs["chainOptions"], chainId: string): string {
+    const structAsymId = chainOptions.reduce<string | undefined>((structAsymId, opt) => {
+        if (structAsymId) return structAsymId;
+        const chain = opt.chains.find(([id, label]) => label.replace(chainIdRegex, "$2") === chainId);
+
+        return chain && (chain[1]?.replace(chainIdRegex, "$1") ?? undefined);
+    }, undefined);
+
+    if (structAsymId === undefined) throw new Error(`Chain not found for chain ${chainId}`);
+
+    return structAsymId;
+
+}
+
 export function getEntityIdFromStructAsymId(chainOptions: EntityChainPairs["chainOptions"], structAsymId: string): string {
     const entityId = chainOptions.find(c => c.chains.find(([_id, label]) => label.replace(chainIdRegex, "$1") === structAsymId))?.entityId;
     if (!entityId) throw new Error(`Entity not found for chain STRUCT_ASYM_ID ${structAsymId}`);
@@ -377,14 +391,17 @@ type SequenceViewState = {
     mode: SequenceViewMode
 }
 
-export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceViewMode, plugin: PDBeMolstarPlugin, onChainUpdate?: (chainId: string) => void }, SequenceViewState> {
-    updateViewerChain?: (chainId: string) => void;
+export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceViewMode, plugin: PDBeMolstarPlugin, onChainUpdate: (chainId: string) => void, isLigandView: () => boolean }, SequenceViewState> {
+    updateViewerChain: (chainId: string) => void;
+    isLigandView: () => boolean;
     state: SequenceViewState = { structureOptions: { options: [], all: [] }, structure: Structure.Empty, structureRef: '', modelEntityId: '', chainGroupId: -1, operatorKey: '', mode: 'single' };
     entityChainPairs: EntityChainPairs | undefined;
     notPolymerEntityChainPairs: EntityChainPairs | undefined;
+    lastValidChainId: string | undefined;
 
     componentDidMount() {
         this.updateViewerChain = this.props.onChainUpdate;
+        this.isLigandView = this.props.isLigandView;
 
         this.props.plugin.events.chainUpdate.subscribe({
             next: chainId => {
@@ -401,13 +418,13 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
                     name: "entity",
                     param: this.params.entity,
                     value: entityId
-                })
+                });
 
                 this.setParamProps({
                     name: "chain",
                     param: this.params.chain,
                     value: chainNumber
-                })
+                });
             },
             error: err => {
                 console.error(err);
@@ -435,13 +452,13 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
                     name: "entity",
                     param: this.params.entity,
                     value: entityId
-                })
+                });
 
                 this.setParamProps({
                     name: "chain",
                     param: this.params.chain,
                     value: chainNumber
-                })
+                });
             },
             error: err => {
                 console.error(err);
@@ -452,6 +469,16 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
             next: callback => {
                 console.debug("molstar.events.dependencyChanged.onChainUpdate");
                 this.updateViewerChain = callback;
+            },
+            error: err => {
+                console.error(err);
+            },
+        });
+
+        this.props.plugin.events.dependencyChanged.isLigandView.subscribe({
+            next: callback => {
+                console.debug("molstar.events.dependencyChanged.isLigandView");
+                this.isLigandView = callback;
             },
             error: err => {
                 console.error(err);
@@ -534,6 +561,15 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
             const ONLY_POLYMERS = true;
             this.entityChainPairs = getEntityChainPairs(this.plugin.state.data, ONLY_POLYMERS);
             this.notPolymerEntityChainPairs = getEntityChainPairs(this.plugin.state.data, !ONLY_POLYMERS);
+
+            if (this.entityChainPairs) {
+                try {
+                    const chainId = getChainIdFromNumberedId(this.entityChainPairs.chainOptions, String(chainGroupId));
+                    this.lastValidChainId = chainId;
+                } catch (error) {
+                    console.error("Unable to set the first state of lastValidChain", error);
+                }
+            }
         } catch (error) {
             console.error(error);
         }
@@ -588,31 +624,48 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
                 state.operatorKey = getOperatorOptions(state.structure, state.modelEntityId, state.chainGroupId)[0][0];
                 break;
             case 'entity':
+                if (state.modelEntityId === p.value) return;
                 state.modelEntityId = p.value;
                 state.chainGroupId = getChainOptions(state.structure, state.modelEntityId)[0][0];
-
-                if (this.updateViewerChain && this.entityChainPairs) {
+                if (this.entityChainPairs && !this.isLigandView()) {
                     try {
                         const chainId = getChainIdFromNumberedId(this.entityChainPairs.chainOptions, String(state.chainGroupId));
+                        this.lastValidChainId = chainId;
                         this.updateViewerChain(chainId);
                     } catch (error) {
                         console.debug("Chain to change is not in one of the polymers.", error);
-                        // Ligand ¿? + Chain
+                        if (this.lastValidChainId) {
+                            try {
+                                const previousStructAsymId = getStructAsymIdFromChainId(this.entityChainPairs.chainOptions, this.lastValidChainId);
+                                this.props.plugin.canvas.showToast({ title: "Chain not in polymer", message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]` });
+                            } catch (error) {
+                                console.debug("Previous valid chain is not in one of the polymers. This should not happen.", error);
+                            }
+                        }
                     }
                 }
 
                 state.operatorKey = getOperatorOptions(state.structure, state.modelEntityId, state.chainGroupId)[0][0];
                 break;
             case 'chain':
+                if (state.chainGroupId === p.value) return;
                 state.chainGroupId = p.value;
 
-                if (this.updateViewerChain && this.entityChainPairs) {
+                if (this.entityChainPairs && this.notPolymerEntityChainPairs && !this.isLigandView()) {
                     try {
                         const chainId = getChainIdFromNumberedId(this.entityChainPairs.chainOptions, String(p.value));
+                        this.lastValidChainId = chainId;
                         this.updateViewerChain(chainId);
                     } catch (error) {
                         console.debug("Chain to change is not in one of the polymers.", error);
-                        // Ligand ¿? + Chain
+                        if (this.lastValidChainId) {
+                            try {
+                                const previousStructAsymId = getStructAsymIdFromChainId(this.entityChainPairs.chainOptions, this.lastValidChainId);
+                                this.props.plugin.canvas.showToast({ title: "Chain not in polymer", message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]` });
+                            } catch (error) {
+                                console.debug("Previous valid chain is not in one of the polymers. This should not happen.", error);
+                            }
+                        }
                     }
                 }
 

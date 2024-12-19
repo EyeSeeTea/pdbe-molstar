@@ -69,6 +69,7 @@ export type InitParams = {
     hideStructure?: ['polymer', 'het', 'water', 'carbs', 'nonStandard', 'coarse'], visualStyle?: 'cartoon' | 'ball-and-stick', encoding: 'cif' | 'bcif'
     granularity?: Loci.Granularity, selection?: { data: QueryParam[], nonSelectedColor?: any, clearPrevious?: boolean }, mapSettings: any, [key: string]: any;
     onChainUpdate?: (chainId: string) => void;
+    isLigandView?: () => boolean;
 }
 
 export const DefaultParams: InitParams = {
@@ -108,4 +109,5 @@ export const DefaultParams: InitParams = {
     alphafoldView: false,
     sequencePanel: false,
     onChainUpdate: undefined,
+    isLigandView: undefined,
 };

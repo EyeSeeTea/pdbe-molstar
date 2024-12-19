@@ -69,7 +69,8 @@ class PDBeMolstarPlugin {
         chainUpdate: this._ev<string>(), // chainId
         ligandUpdate: this._ev<{ ligandId: string, chainId: string }>(),
         dependencyChanged: {
-            onChainUpdate: this._ev<(chainId: string) => void>()
+            onChainUpdate: this._ev<(chainId: string) => void>(),
+            isLigandView: this._ev<() => boolean>()
         },
     };
 
@@ -167,7 +168,7 @@ class PDBeMolstarPlugin {
                 left: showDebugPanels ? LeftPanelControls : "none",
                 right: showDebugPanels ? ControlsWrapper : "none",
                 top: "none",
-                bottom: initSequenceView(this, this.initParams.onChainUpdate).component,
+                bottom: this.initParams.onChainUpdate && this.initParams.isLigandView ? initSequenceView(this, this.initParams.onChainUpdate, this.initParams.isLigandView).component : "none",
             },
             viewport: {
                 controls: PDBeViewportControls,
@@ -1125,6 +1126,7 @@ class PDBeMolstarPlugin {
         updateLigand: (options: { chainId: string; ligandId: string }) => this.events.ligandUpdate.next(options),
         updateDependency: {
             onChainUpdate: (callback: (chainId: string) => void) => this.events.dependencyChanged.onChainUpdate.next(callback),
+            isLigandView: (callback: () => boolean) => this.events.dependencyChanged.isLigandView.next(callback),
         },
         visibility: (data: {
             polymer?: boolean;
