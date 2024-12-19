@@ -459,6 +459,8 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
                     param: this.params.chain,
                     value: chainNumber
                 });
+
+                this.props.plugin.canvas.hideToasts();
             },
             error: err => {
                 console.error(err);
