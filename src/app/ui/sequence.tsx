@@ -632,14 +632,16 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
                         const chainId = getChainIdFromNumberedId(this.entityChainPairs.chainOptions, String(state.chainGroupId));
                         this.lastValidChainId = chainId;
                         this.updateViewerChain(chainId);
+                        this.props.plugin.canvas.hideToasts();
                     } catch (error) {
-                        console.debug("Chain to change is not in one of the polymers.", error);
+                        console.error("Chain to change is not in one of the polymers.", error); // Can happen only if user is changing the entity through molstar sequence because he wants to look for surrounding residues
                         if (this.lastValidChainId) {
                             try {
                                 const previousStructAsymId = getStructAsymIdFromChainId(this.entityChainPairs.chainOptions, this.lastValidChainId);
-                                this.props.plugin.canvas.showToast({ title: "Chain not in polymer", message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]` });
+                                const key = `${state.structureRef}-${state.modelEntityId}-${state.chainGroupId}`;
+                                this.props.plugin.canvas.showToast({ title: "Chain not in polymer", message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]`, key });
                             } catch (error) {
-                                console.debug("Previous valid chain is not in one of the polymers. This should not happen.", error);
+                                console.error("Previous valid chain is not in one of the polymers. This should not happen.", error);
                             }
                         }
                     }
@@ -656,14 +658,16 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
                         const chainId = getChainIdFromNumberedId(this.entityChainPairs.chainOptions, String(p.value));
                         this.lastValidChainId = chainId;
                         this.updateViewerChain(chainId);
+                        this.props.plugin.canvas.hideToasts();
                     } catch (error) {
-                        console.debug("Chain to change is not in one of the polymers.", error);
+                        console.error("Chain to change is not in one of the polymers.", error); // Can happen only if user is changing the entity through molstar sequence because he wants to look for surrounding residues
                         if (this.lastValidChainId) {
                             try {
                                 const previousStructAsymId = getStructAsymIdFromChainId(this.entityChainPairs.chainOptions, this.lastValidChainId);
-                                this.props.plugin.canvas.showToast({ title: "Chain not in polymer", message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]` });
+                                const key = `${state.structureRef}-${state.modelEntityId}-${state.chainGroupId}`;
+                                this.props.plugin.canvas.showToast({ title: "Chain not in polymer", message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]`, key });
                             } catch (error) {
-                                console.debug("Previous valid chain is not in one of the polymers. This should not happen.", error);
+                                console.error("Previous valid chain is not in one of the polymers. This should not happen.", error);
                             }
                         }
                     }
