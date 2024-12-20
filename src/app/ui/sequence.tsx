@@ -616,7 +616,7 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
                             try {
                                 const previousStructAsymId = getStructAsymIdFromChainId(this.entityChainPairs.chainOptions, this.lastValidChainId);
                                 const key = `${state.structureRef}-${state.modelEntityId}-${state.chainGroupId}`;
-                                this.props.plugin.canvas.showToast({ title: "Chain not in polymer", message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]`, key });
+                                this.props.plugin.canvas.showToast({ title: "Chain not in entry", message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]`, key });
                             } catch (error) {
                                 console.error("Previous valid chain is not in one of the polymers. This should not happen.", error);
                             }
@@ -642,7 +642,7 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
                             try {
                                 const previousStructAsymId = getStructAsymIdFromChainId(this.entityChainPairs.chainOptions, this.lastValidChainId);
                                 const key = `${state.structureRef}-${state.modelEntityId}-${state.chainGroupId}`;
-                                this.props.plugin.canvas.showToast({ title: "Chain not in polymer", message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]`, key });
+                                this.props.plugin.canvas.showToast({ title: "Chain not in entry", message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]`, key });
                             } catch (error) {
                                 console.error("Previous valid chain is not in one of the polymers. This should not happen.", error);
                             }
