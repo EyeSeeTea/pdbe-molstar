@@ -220,31 +220,6 @@ export function getEntityChainPairs(state: State, polymers: boolean): EntityChai
         }).join('\n'));
     }
 
-    // NOTE: REMOVE. INTENDED TO GO INTO COMMIT ONLY FOR CHAIN ID FOR FUTURE TESTS
-
-    // const chainIdOptions = chainOptions.flatMap(c => c.chains.map(([_id, label]) => label.replace(chainIdRegex, "$2")));
-    // const duplicates = chainIdOptions.filter((item, index) => chainIdOptions.indexOf(item) !== index);
-
-    // if (duplicates.length > 0) {
-    //     const unique = Array.from(new Set(duplicates));
-    //     const duplicationsPerEntityPerDuplicatedChain = unique.map(duplicatedChainId => {
-    //         const coincidencesPerEntity = chainOptions.flatMap(c => {
-    //             const coincidencesChain = c.chains.filter(([_id, label]) => label.replace(chainIdRegex, "$2") === duplicatedChainId)
-    //                 .map(([_id, label]) => label.replace(chainIdRegex, "$1 [auth $2]"));
-    //             if (coincidencesChain.length > 0) return { entityId: c.entityId, chainsDuplicated: coincidencesChain.join(', ') };
-    //             else return [];
-    //         });
-
-    //         return { duplicatedChainId, coincidencesPerEntity };
-    //     });
-
-    //     // Maintenance Note: Should make tests for all PDBs for this
-    //     throw new Error(duplicationsPerEntityPerDuplicatedChain.map(i => {
-    //         const coincidencesStr = i.coincidencesPerEntity.map(opt => `EntityId: ${opt.entityId}, Chains: ${opt.chainsDuplicated}`).join("; ");
-    //         return `Duplicated chains for: ${i.duplicatedChainId} -> ${coincidencesStr}`
-    //     }).join('\n'));
-    // }
-
     return { entityOptions, chainOptions };
 }
 
