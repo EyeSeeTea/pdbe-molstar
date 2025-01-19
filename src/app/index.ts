@@ -821,34 +821,34 @@ class PDBeMolstarPlugin {
 
     getLociForParams(params: QueryParam[], structureNumber?: number) {
         let assemblyRef = this.assemblyRef;
-        if(structureNumber) {
+        if (structureNumber) {
             assemblyRef =
                 this.plugin.managers.structure.hierarchy.current.structures[
                     structureNumber - 1
                 ].cell.transform.ref;
         }
 
-        if(assemblyRef === "") return EmptyLoci;
-        const structure = this.plugin.state.data.select(assemblyRef)[0]?.obj as
-            | PluginStateObject.Molecule.Structure
-            | undefined;
-        const data = structure?.data;
-        if(!data) return EmptyLoci;
-        return QueryHelper.getInteractivityLoci(params, data);
-    }
-
-    getLociByPLDDT(score: number, structureNumber?: number) {
-        let assemblyRef = this.assemblyRef;
-        if (structureNumber) {
-            assemblyRef = this.plugin.managers.structure.hierarchy.current.structures[structureNumber - 1].cell.transform.ref;
-        }
-
-        if (assemblyRef === '') return EmptyLoci;
+        if (assemblyRef === "") return EmptyLoci;
         const structure = this.plugin.state.data.select(assemblyRef)[0]?.obj as
             | PluginStateObject.Molecule.Structure
             | undefined;
         const data = structure?.data;
         if (!data) return EmptyLoci;
+        return QueryHelper.getInteractivityLoci(params, data);
+    }
+
+    getLociByPLDDT(score: number, structureNumber?: number) {
+        let assemblyRef = this.assemblyRef;
+        if(structureNumber) {
+            assemblyRef = this.plugin.managers.structure.hierarchy.current.structures[structureNumber - 1].cell.transform.ref;
+        }
+
+        if(assemblyRef === '') return EmptyLoci;
+        const structure = this.plugin.state.data.select(assemblyRef)[0]?.obj as
+            | PluginStateObject.Molecule.Structure
+            | undefined;
+        const data = structure?.data;
+        if(!data) return EmptyLoci;
         return AlphafoldView.getLociByPLDDT(score, data);
     }
 
