@@ -168,7 +168,15 @@ class PDBeMolstarPlugin {
                 left: showDebugPanels ? LeftPanelControls : "none",
                 right: showDebugPanels ? ControlsWrapper : "none",
                 top: "none",
-                bottom: this.initParams.onChainUpdate && this.initParams.isLigandView ? initSequenceView(this, this.initParams.onChainUpdate, this.initParams.isLigandView).component : "none",
+                bottom:
+                    this.initParams.onChainUpdate &&
+                    this.initParams.isLigandView
+                        ? initSequenceView(
+                              this,
+                              this.initParams.onChainUpdate,
+                              this.initParams.isLigandView
+                          ).component
+                        : "none",
             },
             viewport: {
                 controls: PDBeViewportControls,
@@ -180,8 +188,8 @@ class PDBeMolstarPlugin {
             structureTools: this.initParams.superposition
                 ? PDBeSuperpositionStructureTools
                 : this.initParams.ligandView
-                    ? PDBeLigandViewStructureTools
-                    : PDBeStructureTools,
+                ? PDBeLigandViewStructureTools
+                : PDBeStructureTools,
         };
 
         if (this.initParams.alphafoldView) {
@@ -199,8 +207,8 @@ class PDBeMolstarPlugin {
             };
         }
 
-        if (this.initParams.sequencePanel) {
-            if (pdbePluginSpec.components.controls?.top) delete pdbePluginSpec.components.controls.top;
+        if(this.initParams.sequencePanel) {
+            if(pdbePluginSpec.components.controls?.top) delete pdbePluginSpec.components.controls.top;
         }
 
         pdbePluginSpec.config = [
@@ -370,7 +378,7 @@ class PDBeMolstarPlugin {
             // Event handling
             CustomEvents.add(this.plugin, this.targetElement);
 
-            if (!dataSource) { //allow plugin to load without pdbId
+            if(!dataSource) { //allow plugin to load without pdbId
                 this.events.loadComplete.next(true);
             }
         }
@@ -394,7 +402,7 @@ class PDBeMolstarPlugin {
                 if (this.initParams.ligandView.label_comp_id) {
                     queryParams.push(
                         "label_comp_id=" +
-                        this.initParams.ligandView.label_comp_id
+                            this.initParams.ligandView.label_comp_id
                     );
                 } else if (this.initParams.ligandView.auth_seq_id) {
                     queryParams.push(
@@ -404,15 +412,17 @@ class PDBeMolstarPlugin {
                 if (this.initParams.ligandView.auth_asym_id)
                     queryParams.push(
                         "auth_asym_id=" +
-                        this.initParams.ligandView.auth_asym_id
+                            this.initParams.ligandView.auth_asym_id
                     );
             }
             query = "residueSurroundings?" + queryParams.join("&");
             sep = "&";
         }
-        let url = `${this.initParams.pdbeUrl
-            }model-server/v1/${id}/${query}${sep}encoding=${this.initParams.encoding
-            }${this.initParams.lowPrecisionCoords ? "&lowPrecisionCoords=1" : ""}`;
+        let url = `${
+            this.initParams.pdbeUrl
+        }model-server/v1/${id}/${query}${sep}encoding=${
+            this.initParams.encoding
+        }${this.initParams.lowPrecisionCoords ? "&lowPrecisionCoords=1" : ""}`;
         let isBinary = this.initParams.encoding === "bcif" ? true : false;
         let format = "mmcif";
 
@@ -599,7 +609,7 @@ class PDBeMolstarPlugin {
             { url: Asset.Url(url, downloadOptions), label, isBinary },
             { state: { isGhost: true } }
         );
-
+        
         const trajectory = await this.plugin.builders.structure
             .parseTrajectory(data, format)
             .then((trajectory) => {
@@ -649,7 +659,7 @@ class PDBeMolstarPlugin {
                 .length - 1;
         const pivot =
             this.plugin.managers.structure.hierarchy.selection.structures[
-            pivotIndex
+                pivotIndex
             ];
         if (pivot && pivot.cell.parent)
             this.assemblyRef = pivot.cell.transform.ref;
@@ -690,8 +700,7 @@ class PDBeMolstarPlugin {
 
         // Sequence Viewer
         try {
-            const ONLY_POLYMERS = true;
-            const sequenceOptions = getEntityChainPairs(this.plugin.state.data, ONLY_POLYMERS);
+            const sequenceOptions = getEntityChainPairs(this.plugin.state.data, { onlyPolymers: true });
             this.events.sequenceComplete.next(sequenceOptions);
         } catch (error) {
             console.error(error);
@@ -812,19 +821,19 @@ class PDBeMolstarPlugin {
 
     getLociForParams(params: QueryParam[], structureNumber?: number) {
         let assemblyRef = this.assemblyRef;
-        if (structureNumber) {
+        if(structureNumber) {
             assemblyRef =
                 this.plugin.managers.structure.hierarchy.current.structures[
                     structureNumber - 1
                 ].cell.transform.ref;
         }
 
-        if (assemblyRef === "") return EmptyLoci;
+        if(assemblyRef === "") return EmptyLoci;
         const structure = this.plugin.state.data.select(assemblyRef)[0]?.obj as
             | PluginStateObject.Molecule.Structure
             | undefined;
         const data = structure?.data;
-        if (!data) return EmptyLoci;
+        if(!data) return EmptyLoci;
         return QueryHelper.getInteractivityLoci(params, data);
     }
 
@@ -845,7 +854,7 @@ class PDBeMolstarPlugin {
 
 
 
-    normalizeColor(colorVal: any, defaultColor?: Color) {
+    normalizeColor(colorVal: any, defaultColor?: Color){
         let color = Color.fromRgb(170, 170, 170);
         try {
             if (typeof colorVal.r !== "undefined") {
@@ -905,7 +914,7 @@ class PDBeMolstarPlugin {
             if (params.structureNumber) {
                 structureData = [
                     this.plugin.managers.structure.hierarchy.current.structures[
-                    params.structureNumber - 1
+                        params.structureNumber - 1
                     ],
                 ];
             }
@@ -1123,10 +1132,13 @@ class PDBeMolstarPlugin {
             this.events.updateComplete.next(true);
         },
         updateChain: (chainId: string) => this.events.chainUpdate.next(chainId),
-        updateLigand: (options: { chainId: string; ligandId: string }) => this.events.ligandUpdate.next(options),
+        updateLigand: (options: { chainId: string; ligandId: string }) =>
+            this.events.ligandUpdate.next(options),
         updateDependency: {
-            onChainUpdate: (callback: (chainId: string) => void) => this.events.dependencyChanged.onChainUpdate.next(callback),
-            isLigandView: (callback: () => boolean) => this.events.dependencyChanged.isLigandView.next(callback),
+            onChainUpdate: (callback: (chainId: string) => void) =>
+                this.events.dependencyChanged.onChainUpdate.next(callback),
+            isLigandView: (callback: () => boolean) =>
+                this.events.dependencyChanged.isLigandView.next(callback),
         },
         visibility: (data: {
             polymer?: boolean;

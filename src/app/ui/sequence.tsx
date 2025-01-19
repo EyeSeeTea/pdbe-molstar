@@ -126,8 +126,8 @@ export function getLigand(options: { chainId: string; ligandId: string }, struct
     return groupedLigandsById[options.ligandId].filter(ligand => ligand.chainId === options.chainId)[0];
 }
 
-export function getModelEntityOptions(structure: Structure, polymersOnly = false): [string, string][] {
-    const options: [string, string][] = [];
+export function getModelEntityOptions(structure: Structure, options: { onlyPolymers: boolean}): [string, string][] {
+    const entityOptions: [string, string][] = [];
     const l = StructureElement.Location.create(structure);
     const seen = new Set<string>();
 
@@ -137,7 +137,7 @@ export function getModelEntityOptions(structure: Structure, polymersOnly = false
         const modelIdx = structure.getModelIndex(unit.model);
         const key = `${modelIdx}|${id}`;
         if (seen.has(key)) continue;
-        if (polymersOnly && SP.entity.type(l) !== 'polymer') continue;
+        if (options.onlyPolymers && SP.entity.type(l) !== 'polymer') continue;
 
         let description = SP.entity.pdbx_description(l).join(', ');
         if (structure.models.length) {
@@ -148,16 +148,16 @@ export function getModelEntityOptions(structure: Structure, polymersOnly = false
             }
         }
         const label = `${id}: ${description}`;
-        options.push([key, label]);
+        entityOptions.push([key, label]);
         seen.add(key);
 
-        if (options.length > MaxSelectOptionsCount) {
+        if (entityOptions.length > MaxSelectOptionsCount) {
             return [['', 'Too many entities']];
         }
     }
 
-    if (options.length === 0) options.push(['', 'No entities']);
-    return options;
+    if (entityOptions.length === 0) entityOptions.push(['', 'No entities']);
+    return entityOptions;
 }
 
 export function getChainOptions(structure: Structure, modelEntityId: string): [number, string][] {
@@ -190,34 +190,66 @@ export function getChainOptions(structure: Structure, modelEntityId: string): [n
     return options;
 }
 
-export function getEntityChainPairs(state: State, polymers: boolean): EntityChainPairs {
+export function getEntityChainPairs(
+    state: State,
+    options: { onlyPolymers: boolean }
+): EntityChainPairs {
     const structureOptions = getStructureOptions(state);
     const structureRef = structureOptions.options[0][0];
     const structure = getStructure(state, structureRef);
-    const entityOptions = getModelEntityOptions(structure, polymers);
-    const chainOptions = entityOptions.map(([modelEntityId, _eLabel]) => ({ entityId: modelEntityId, chains: getChainOptions(structure, modelEntityId) }));
+    const entityOptions = getModelEntityOptions(structure, options);
+    const chainOptions = entityOptions.map(([modelEntityId, _eLabel]) => ({
+        entityId: modelEntityId,
+        chains: getChainOptions(structure, modelEntityId),
+    }));
 
-    const chainIdOptions = chainOptions.flatMap(c => c.chains.map(([_id, label]) => label.replace(chainIdRegex, "$1$2")));
-    const duplicates = chainIdOptions.filter((item, index) => chainIdOptions.indexOf(item) !== index);
+    const chainIdOptions = chainOptions.flatMap((c) =>
+        c.chains.map(([_id, label]) => label.replace(chainIdRegex, "$1$2"))
+    );
+    const duplicates = chainIdOptions.filter(
+        (item, index) => chainIdOptions.indexOf(item) !== index
+    );
 
     if (duplicates.length > 0) {
         const unique = Array.from(new Set(duplicates));
-        const duplicationsPerEntityPerDuplicatedChain = unique.map(duplicatedChainId => {
-            const coincidencesPerEntity = chainOptions.flatMap(c => {
-                const coincidencesChain = c.chains.filter(([_id, label]) => label.replace(chainIdRegex, "$1$2") === duplicatedChainId)
-                    .map(([_id, label]) => label.replace(chainIdRegex, "$1 [auth $2]"));
-                if (coincidencesChain.length > 0) return { entityId: c.entityId, chainsDuplicated: coincidencesChain.join(', ') };
-                else return [];
-            });
+        const duplicationsPerEntityPerDuplicatedChain = unique.map(
+            (duplicatedChainId) => {
+                const coincidencesPerEntity = chainOptions.flatMap((c) => {
+                    const coincidencesChain = c.chains
+                        .filter(
+                            ([_id, label]) =>
+                                label.replace(chainIdRegex, "$1$2") ===
+                                duplicatedChainId
+                        )
+                        .map(([_id, label]) =>
+                            label.replace(chainIdRegex, "$1 [auth $2]")
+                        );
+                    if (coincidencesChain.length > 0)
+                        return {
+                            entityId: c.entityId,
+                            chainsDuplicated: coincidencesChain.join(", "),
+                        };
+                    else return [];
+                });
 
-            return { duplicatedChainId, coincidencesPerEntity };
-        });
+                return { duplicatedChainId, coincidencesPerEntity };
+            }
+        );
 
         // Maintenance Note: Should make tests for all PDBs for this
-        throw new Error(duplicationsPerEntityPerDuplicatedChain.map(i => {
-            const coincidencesStr = i.coincidencesPerEntity.map(opt => `EntityId: ${opt.entityId}, Chains: ${opt.chainsDuplicated}`).join("; ");
-            return `Duplicated chains for: ${i.duplicatedChainId} -> ${coincidencesStr}`
-        }).join('\n'));
+        throw new Error(
+            duplicationsPerEntityPerDuplicatedChain
+                .map((i) => {
+                    const coincidencesStr = i.coincidencesPerEntity
+                        .map(
+                            (opt) =>
+                                `EntityId: ${opt.entityId}, Chains: ${opt.chainsDuplicated}`
+                        )
+                        .join("; ");
+                    return `Duplicated chains for: ${i.duplicatedChainId} -> ${coincidencesStr}`;
+                })
+                .join("\n")
+        );
     }
 
     return { entityOptions, chainOptions };
@@ -507,7 +539,7 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
         const structure = this.getStructure(this.state.structureRef);
         const wrappers: { wrapper: (string | SequenceWrapper.Any), label: string }[] = [];
 
-        for (const [modelEntityId, eLabel] of getModelEntityOptions(structure, this.state.mode === 'polymers')) {
+        for (const [modelEntityId, eLabel] of getModelEntityOptions(structure, { onlyPolymers: this.state.mode === 'polymers' })) {
             for (const [chainGroupId, cLabel] of getChainOptions(structure, modelEntityId)) {
                 for (const [operatorKey] of getOperatorOptions(structure, modelEntityId, chainGroupId)) {
                     wrappers.push({
@@ -530,14 +562,13 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
         const structureOptions = getStructureOptions(this.plugin.state.data);
         const structureRef = structureOptions.options[0][0];
         const structure = this.getStructure(structureRef);
-        let modelEntityId = getModelEntityOptions(structure)[0][0];
+        let modelEntityId = getModelEntityOptions(structure, { onlyPolymers: false })[0][0];
         let chainGroupId = getChainOptions(structure, modelEntityId)[0][0];
         let operatorKey = getOperatorOptions(structure, modelEntityId, chainGroupId)[0][0];
 
         try {
-            const ONLY_POLYMERS = true;
-            this.entityChainPairs = getEntityChainPairs(this.plugin.state.data, ONLY_POLYMERS);
-            this.notPolymerEntityChainPairs = getEntityChainPairs(this.plugin.state.data, !ONLY_POLYMERS);
+            this.entityChainPairs = getEntityChainPairs(this.plugin.state.data, { onlyPolymers: true });
+            this.notPolymerEntityChainPairs = getEntityChainPairs(this.plugin.state.data, { onlyPolymers: false});
 
             if (this.entityChainPairs) {
                 try {
@@ -561,7 +592,7 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
 
     private get params() {
         const { structureOptions, structure, modelEntityId, chainGroupId } = this.state;
-        const entityOptions = getModelEntityOptions(structure);
+        const entityOptions = getModelEntityOptions(structure, { onlyPolymers: false });
         const chainOptions = getChainOptions(structure, modelEntityId);
         const operatorOptions = getOperatorOptions(structure, modelEntityId, chainGroupId);
         return {
@@ -596,7 +627,7 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
             case 'structure':
                 if (p.name === 'structure') state.structureRef = p.value;
                 state.structure = this.getStructure(state.structureRef);
-                state.modelEntityId = getModelEntityOptions(state.structure)[0][0];
+                state.modelEntityId = getModelEntityOptions(state.structure, { onlyPolymers: false })[0][0];
                 state.chainGroupId = getChainOptions(state.structure, state.modelEntityId)[0][0];
                 state.operatorKey = getOperatorOptions(state.structure, state.modelEntityId, state.chainGroupId)[0][0];
                 break;
