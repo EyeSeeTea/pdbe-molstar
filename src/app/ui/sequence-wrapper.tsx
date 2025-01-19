@@ -8,7 +8,7 @@ export function initSequenceView(
     isLigandView: () => boolean
 ) {
     return {
-        component: class extends React.Component<{}> {
+        component: class SequenceViewWrapper extends React.Component<{}> {
             render() {
                 return (
                     <SequenceView
