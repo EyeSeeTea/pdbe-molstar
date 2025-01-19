@@ -1,3 +1,7 @@
+/* File from molstar, modified in order to synchronize with viewer */
+/* Extracted from: Commit df3a7e5 (change access modifiers) MKampfrath, Dec 12 2022 */
+/* Import with no modifications: Commit fcc0c6c (Add SequenceView component) p3rcypj, Dec 4 2024 */
+
 /**
  * Copyright (c) 2018-2021 mol* contributors, licensed under MIT, See LICENSE file for more info.
  *
