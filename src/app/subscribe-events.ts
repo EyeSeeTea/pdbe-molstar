@@ -1,5 +1,11 @@
 import { QueryParam } from './helpers';
 
+declare global {
+    interface Window {
+        proteinId: string;
+    }
+}
+
 export function subscribeToComponentEvents(wrapperCtx: any) {
     document.addEventListener('PDB.interactions.click', function(e: any){
         if(typeof e.detail !== 'undefined'){
@@ -62,9 +68,15 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
 
             let highlightQuery: any = undefined;
 
+            const proteinId = window.proteinId;
+
             // Create query object from event data
             if(e.detail.start && e.detail.end){
-                highlightQuery = {
+                highlightQuery = proteinId ? {
+                    uniprot_accession: proteinId,
+                    start_uniprot_residue_number: parseInt(e.detail.start),
+                    end_uniprot_residue_number: parseInt(e.detail.end)
+                } : {
                     start_auth_residue_number: parseInt(e.detail.start),
                     end_auth_residue_number: parseInt(e.detail.end)
                 };
@@ -82,13 +94,27 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
         const { detail } = (ev as unknown as ({ detail: MultiSelectDetail | undefined }));
         if (detail === undefined) return;
 
+        const proteinId = window.proteinId;
+
         const params = (detail.fragments || []).map((fragment): QueryParam => {
-            return {
-                start_auth_residue_number: (fragment.start),
-                end_auth_residue_number: (fragment.end),
-                color: fragment.color,
-                entity_id: fragment.feature?.entityId,
-                auth_asym_id: fragment.feature?.bestChainId,
+            if (proteinId) {
+                return {
+                    uniprot_accession: proteinId,
+                    start_uniprot_residue_number: fragment.start,
+                    end_uniprot_residue_number: fragment.end,
+                    color: fragment.color,
+                    entity_id: fragment.feature?.entityId,
+                    auth_asym_id: fragment.feature?.bestChainId,
+                }
+            }
+            else {
+                return {
+                    start_auth_residue_number: fragment.start,
+                    end_auth_residue_number: fragment.end,
+                    color: fragment.color,
+                    entity_id: fragment.feature?.entityId,
+                    auth_asym_id: fragment.feature?.bestChainId,
+                }
             };
         });
 
@@ -112,9 +138,15 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
             let showInteraction = false;
             let highlightQuery: any = undefined;
 
+            const proteinId = window.proteinId;
+
             // Create query object from event data
             if(e.detail.start && e.detail.end){
-                highlightQuery = {
+                highlightQuery = proteinId ? {
+                    uniprot_accession: proteinId,
+                    start_uniprot_residue_number: parseInt(e.detail.start),
+                    end_uniprot_residue_number: parseInt(e.detail.end)
+                } : {
                     start_auth_residue_number: parseInt(e.detail.start),
                     end_auth_residue_number: parseInt(e.detail.end)
                 };
