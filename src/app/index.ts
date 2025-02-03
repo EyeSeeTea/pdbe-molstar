@@ -83,8 +83,7 @@ class PDBeMolstarPlugin {
     isHighlightColorUpdated = false;
     isSelectedColorUpdated = false;
     toasts: string[] = [];
-
-    chainSelected: string | undefined = undefined;
+    proteinId: string | undefined = undefined;
 
     async render(target: string | HTMLElement, options: InitParams) {
         if (!options) return;
@@ -869,6 +868,13 @@ class PDBeMolstarPlugin {
         }
         return color;
     }
+
+    updateState = {
+        /* undefined for those cases where there is no uniprot */
+        proteinId: (id: string | undefined) => {
+            this.proteinId = id;
+        }
+    };
 
     visual = {
         highlight: (params: {

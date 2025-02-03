@@ -1,12 +1,7 @@
+import { PDBeMolstarPlugin } from '.';
 import { QueryParam } from './helpers';
 
-declare global {
-    interface Window {
-        proteinId: string;
-    }
-}
-
-export function subscribeToComponentEvents(wrapperCtx: any) {
+export function subscribeToComponentEvents(wrapperCtx: PDBeMolstarPlugin) {
     document.addEventListener('PDB.interactions.click', function(e: any){
         if(typeof e.detail !== 'undefined'){
             const data = e.detail.interacting_nodes ? { data: e.detail.interacting_nodes } : { data: [e.detail.selected_node] };
@@ -68,7 +63,7 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
 
             let highlightQuery: any = undefined;
 
-            const proteinId = window.proteinId;
+            const proteinId = wrapperCtx.proteinId;
 
             // Create query object from event data
             if(e.detail.start && e.detail.end){
@@ -94,7 +89,7 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
         const { detail } = (ev as unknown as ({ detail: MultiSelectDetail | undefined }));
         if (detail === undefined) return;
 
-        const proteinId = window.proteinId;
+        const proteinId = wrapperCtx.proteinId;
 
         const params = (detail.fragments || []).map((fragment): QueryParam => {
             if (proteinId) {
@@ -138,7 +133,7 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
             let showInteraction = false;
             let highlightQuery: any = undefined;
 
-            const proteinId = window.proteinId;
+            const proteinId = wrapperCtx.proteinId;
 
             // Create query object from event data
             if(e.detail.start && e.detail.end){
