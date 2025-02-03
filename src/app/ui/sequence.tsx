@@ -772,42 +772,7 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
                     state.structure,
                     state.modelEntityId
                 )[0][0];
-                if (this.entityChainPairs && !this.isLigandView()) {
-                    try {
-                        const chainId = getChainIdFromNumberedId(
-                            this.entityChainPairs.chainOptions,
-                            String(state.chainGroupId)
-                        );
-                        this.lastValidChainId = chainId;
-                        this.updateViewerChain(chainId);
-                        this.props.plugin.canvas.hideToasts();
-                    } catch (error) {
-                        console.error(
-                            "Chain to change is not in one of the polymers.",
-                            error
-                        ); // Can happen only if user is changing the entity through molstar sequence because he wants to look for surrounding residues
-                        if (this.lastValidChainId) {
-                            try {
-                                const previousStructAsymId = getStructAsymIdFromChainId(
-                                    this.entityChainPairs.chainOptions,
-                                    this.lastValidChainId
-                                );
-                                const key = `${state.structureRef}-${state.modelEntityId}-${state.chainGroupId}`;
-                                this.props.plugin.canvas.showToast({
-                                    title: "Chain not in entry",
-                                    message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]`,
-                                    key,
-                                });
-                            } catch (error) {
-                                console.error(
-                                    "Previous valid chain is not in one of the polymers. This should not happen.",
-                                    error
-                                );
-                            }
-                        }
-                    }
-                }
-
+                this.updateChainInViewer(p.value, state);
                 state.operatorKey = getOperatorOptions(
                     state.structure,
                     state.modelEntityId,
@@ -817,47 +782,7 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
             case 'chain':
                 if (state.chainGroupId === p.value) return;
                 state.chainGroupId = p.value;
-
-                if (
-                    this.entityChainPairs &&
-                    this.notPolymerEntityChainPairs &&
-                    !this.isLigandView()
-                ) {
-                    try {
-                        const chainId = getChainIdFromNumberedId(
-                            this.entityChainPairs.chainOptions,
-                            String(p.value)
-                        );
-                        this.lastValidChainId = chainId;
-                        this.updateViewerChain(chainId);
-                        this.props.plugin.canvas.hideToasts();
-                    } catch (error) {
-                        console.error(
-                            "Chain to change is not in one of the polymers.",
-                            error
-                        ); // Can happen only if user is changing the entity through molstar sequence because he wants to look for surrounding residues
-                        if (this.lastValidChainId) {
-                            try {
-                                const previousStructAsymId = getStructAsymIdFromChainId(
-                                    this.entityChainPairs.chainOptions,
-                                    this.lastValidChainId
-                                );
-                                const key = `${state.structureRef}-${state.modelEntityId}-${state.chainGroupId}`;
-                                this.props.plugin.canvas.showToast({
-                                    title: "Chain not in entry",
-                                    message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]`,
-                                    key,
-                                });
-                            } catch (error) {
-                                console.error(
-                                    "Previous valid chain is not in one of the polymers. This should not happen.",
-                                    error
-                                );
-                            }
-                        }
-                    }
-                }
-
+                this.updateChainInViewer(p.value, state);
                 state.operatorKey = getOperatorOptions(state.structure, state.modelEntityId, state.chainGroupId)[0][0];
                 break;
             case 'operator':
@@ -866,6 +791,65 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
         }
         this.setState(state);
     };
+
+    private updateChainInViewer(
+        value: any,
+        state: {
+            structureRef: string;
+            modelEntityId: string;
+            chainGroupId: number;
+        }
+    ) {
+        if (this.entityChainPairs && !this.isLigandView()) {
+            try {
+                const chainId = getChainIdFromNumberedId(
+                    this.entityChainPairs.chainOptions,
+                    String(value)
+                );
+                this.lastValidChainId = chainId;
+                this.updateViewerChain(chainId);
+                this.props.plugin.canvas.hideToasts();
+            } catch (error) {
+                this.handleInvalidChain(
+                    error,
+                    this.entityChainPairs.chainOptions,
+                    state
+                );
+            }
+        }
+    }
+
+    // Can happen only if user is changing the entity through molstar sequence because he wants to look for surrounding residues
+    private handleInvalidChain(
+        error: any,
+        chainOptions: EntityChainPairs["chainOptions"],
+        state: {
+            structureRef: string;
+            modelEntityId: string;
+            chainGroupId: number;
+        }
+    ) {
+        console.error("Chain to change is not in one of the polymers.", error);
+        if (this.lastValidChainId) {
+            try {
+                const previousStructAsymId = getStructAsymIdFromChainId(
+                    chainOptions,
+                    this.lastValidChainId
+                );
+                const key = `${state.structureRef}-${state.modelEntityId}-${state.chainGroupId}`;
+                this.props.plugin.canvas.showToast({
+                    title: "Chain not in entry",
+                    message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]`,
+                    key,
+                });
+            } catch (error) {
+                console.error(
+                    "Previous valid chain is not in one of the polymers. This should not happen.",
+                    error
+                );
+            }
+        }
+    }
 
     render() {
         if (this.getStructure(this.state.structureRef) === Structure.Empty) {
@@ -944,18 +928,16 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
                     )}
 
                     {params.operator.options.length > 1 && (
-                        <>
-                            <PureSelectControl
-                                title={`[Instance] ${PD.optionLabel(
-                                    params.operator,
-                                    values.operator
-                                )}`}
-                                param={params.operator}
-                                name="operator"
-                                value={values.operator}
-                                onChange={this.setParamProps}
-                            />
-                        </>
+                        <PureSelectControl
+                            title={`[Instance] ${PD.optionLabel(
+                                params.operator,
+                                values.operator
+                            )}`}
+                            param={params.operator}
+                            name="operator"
+                            value={values.operator}
+                            onChange={this.setParamProps}
+                        />
                     )}
                 </div>
 
