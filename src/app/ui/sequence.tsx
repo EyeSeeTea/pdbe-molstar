@@ -48,7 +48,15 @@ export function splitModelEntityId(modelEntityId: string) {
     return [parseInt(modelIdx), entityId];
 }
 
-export function getSequenceWrapper(state: { structure: Structure, modelEntityId: string, chainGroupId: number, operatorKey: string }, structureSelection: StructureSelectionManager): SequenceWrapper.Any | string {
+export function getSequenceWrapper(
+    state: {
+        structure: Structure;
+        modelEntityId: string;
+        chainGroupId: number;
+        operatorKey: string;
+    },
+    structureSelection: StructureSelectionManager
+): SequenceWrapper.Any | string {
     const { structure, modelEntityId, chainGroupId, operatorKey } = state;
     const l = StructureElement.Location.create(structure);
     const [modelIdx, entityId] = splitModelEntityId(modelEntityId);
@@ -259,31 +267,53 @@ export function getEntityChainPairs(
     return { entityOptions, chainOptions };
 }
 
-// const chainIdRegex = /(?:(\w+) ){0,1}(?:\[auth (\w+)\]){0,1}/; if both ids are present this regex will match (which is not intended for later substitutions)
-// With next regex, if some id is not present will not match, but intended for later substitutions; because if there is no id is because they are the same or there is no struct asym id for formats like "pdb" or "ent"
+// const chainIdRegex = /(?:(\w+) ){0,1}(?:\[auth (\w+)\]){0,1}/; if both ids are present this
+// regex will match (which is not intended for later substitutions).
+// With next regex, if some id is not present will not match, but intended for later substitutions;
+// because if there is no id is because they are the same or there is no struct asym id for formats
+// like "pdb" or "ent"
 const chainIdRegex = /^(?:(\w+)\s{0,1}){0,1}(?:\[auth (\w+)\])$/; // $1 structAsymId, $2 chainId (auth)
 
-export function getEntityIdFromChainId(chainOptions: EntityChainPairs["chainOptions"], chainId: string): string {
-    const entityId = chainOptions.find(c => c.chains.find(([_id, label]) => label.replace(chainIdRegex, "$2") === chainId))?.entityId;
+export function getEntityIdFromChainId(
+    chainOptions: EntityChainPairs["chainOptions"],
+    chainId: string
+): string {
+    const entityId = chainOptions.find((c) =>
+        c.chains.find(
+            ([_id, label]) => label.replace(chainIdRegex, "$2") === chainId
+        )
+    )?.entityId;
     if (!entityId) throw new Error(`Entity not found for chain ${chainId}`);
 
     return entityId;
 }
 
-export function getChainNumberedIdFromChainId(chainOptions: EntityChainPairs["chainOptions"], chainId: string): number {
-    const chainNumberedId = chainOptions.reduce<number | undefined>((numberedId, opt) => {
-        if (typeof numberedId === "number") return numberedId;
-        const chain = opt.chains.find(([_id, label]) => label.replace(chainIdRegex, "$2") === chainId);
+export function getChainNumberedIdFromChainId(
+    chainOptions: EntityChainPairs["chainOptions"],
+    chainId: string
+): number {
+    const chainNumberedId = chainOptions.reduce<number | undefined>(
+        (numberedId, opt) => {
+            if (typeof numberedId === "number") return numberedId;
+            const chain = opt.chains.find(
+                ([_id, label]) => label.replace(chainIdRegex, "$2") === chainId
+            );
 
-        return chain && (chain[0] ?? undefined);
-    }, undefined);
+            return chain && (chain[0] ?? undefined);
+        },
+        undefined
+    );
 
-    if (chainNumberedId === undefined) throw new Error(`Chain not found for chain ${chainId}`);
+    if (chainNumberedId === undefined)
+        throw new Error(`Chain not found for chain ${chainId}`);
 
     return chainNumberedId;
 }
 
-export function getChainIdFromNumberedId(chainOptions: EntityChainPairs["chainOptions"], chainNumberedId: string): string {
+export function getChainIdFromNumberedId(
+    chainOptions: EntityChainPairs["chainOptions"],
+    chainNumberedId: string
+): string {
     const chainId = chainOptions.reduce<string | undefined>((chainId, opt) => {
         if (chainId) return chainId;
         const chain = opt.chains.find(([id]) => String(id) === chainNumberedId);
@@ -291,41 +321,74 @@ export function getChainIdFromNumberedId(chainOptions: EntityChainPairs["chainOp
         return chain && (chain[1]?.replace(chainIdRegex, "$2") ?? undefined);
     }, undefined);
 
-    if (chainId === undefined) throw new Error(`Chain not found for chain ${chainNumberedId}`);
+    if (chainId === undefined)
+        throw new Error(`Chain not found for chain ${chainNumberedId}`);
 
     return chainId;
 }
 
-export function getStructAsymIdFromChainId(chainOptions: EntityChainPairs["chainOptions"], chainId: string): string {
-    const structAsymId = chainOptions.reduce<string | undefined>((structAsymId, opt) => {
-        if (structAsymId) return structAsymId;
-        const chain = opt.chains.find(([id, label]) => label.replace(chainIdRegex, "$2") === chainId);
+export function getStructAsymIdFromChainId(
+    chainOptions: EntityChainPairs["chainOptions"],
+    chainId: string
+): string {
+    const structAsymId = chainOptions.reduce<string | undefined>(
+        (structAsymId, opt) => {
+            if (structAsymId) return structAsymId;
+            const chain = opt.chains.find(
+                ([id, label]) => label.replace(chainIdRegex, "$2") === chainId
+            );
 
-        return chain && (chain[1]?.replace(chainIdRegex, "$1") ?? undefined);
-    }, undefined);
+            return (
+                chain && (chain[1]?.replace(chainIdRegex, "$1") ?? undefined)
+            );
+        },
+        undefined
+    );
 
-    if (structAsymId === undefined) throw new Error(`Chain not found for chain ${chainId}`);
+    if (structAsymId === undefined)
+        throw new Error(`Chain not found for chain ${chainId}`);
 
     return structAsymId;
-
 }
 
-export function getEntityIdFromStructAsymId(chainOptions: EntityChainPairs["chainOptions"], structAsymId: string): string {
-    const entityId = chainOptions.find(c => c.chains.find(([_id, label]) => label.replace(chainIdRegex, "$1") === structAsymId))?.entityId;
-    if (!entityId) throw new Error(`Entity not found for chain STRUCT_ASYM_ID ${structAsymId}`);
+export function getEntityIdFromStructAsymId(
+    chainOptions: EntityChainPairs["chainOptions"],
+    structAsymId: string
+): string {
+    const entityId = chainOptions.find((c) =>
+        c.chains.find(
+            ([_id, label]) => label.replace(chainIdRegex, "$1") === structAsymId
+        )
+    )?.entityId;
+    if (!entityId)
+        throw new Error(
+            `Entity not found for chain STRUCT_ASYM_ID ${structAsymId}`
+        );
 
     return entityId;
 }
 
-export function getChainNumberedIdFromStructAsymId(chainOptions: EntityChainPairs["chainOptions"], structAsymId: string): number {
-    const chainNumberedId = chainOptions.reduce<number | undefined>((numberedId, opt) => {
-        if (typeof numberedId === "number") return numberedId;
-        const chain = opt.chains.find(([_id, label]) => label.replace(chainIdRegex, "$1") === structAsymId);
+export function getChainNumberedIdFromStructAsymId(
+    chainOptions: EntityChainPairs["chainOptions"],
+    structAsymId: string
+): number {
+    const chainNumberedId = chainOptions.reduce<number | undefined>(
+        (numberedId, opt) => {
+            if (typeof numberedId === "number") return numberedId;
+            const chain = opt.chains.find(
+                ([_id, label]) =>
+                    label.replace(chainIdRegex, "$1") === structAsymId
+            );
 
-        return chain && (chain[0] ?? undefined);
-    }, undefined);
+            return chain && (chain[0] ?? undefined);
+        },
+        undefined
+    );
 
-    if (chainNumberedId === undefined) throw new Error(`Chain not found for chain STRUCT_ASYM_ID ${structAsymId}`);
+    if (chainNumberedId === undefined)
+        throw new Error(
+            `Chain not found for chain STRUCT_ASYM_ID ${structAsymId}`
+        );
 
     return chainNumberedId;
 }
@@ -381,8 +444,13 @@ export function getStructure(state: State, ref: string) {
     return (cell.obj as PSO.Molecule.Structure).data;
 }
 
-export type SequenceViewMode = 'single' | 'polymers' | 'all'
-const SequenceViewModeParam = PD.Select<SequenceViewMode>('single', [['single', 'Chain'], ['polymers', 'Polymers'], ['all', 'Everything']]);
+export type SequenceViewMode = 'single' | 'polymers' | 'all';
+
+const SequenceViewModeParam = PD.Select<SequenceViewMode>("single", [
+    ["single", "Chain"],
+    ["polymers", "Polymers"],
+    ["all", "Everything"],
+]);
 
 type EntityChainPairs = {
     entityOptions: [string, string][];
@@ -402,10 +470,26 @@ type SequenceViewState = {
     mode: SequenceViewMode
 }
 
-export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceViewMode, plugin: PDBeMolstarPlugin, onChainUpdate: (chainId: string) => void, isLigandView: () => boolean }, SequenceViewState> {
+type Props = {
+    defaultMode?: SequenceViewMode;
+    plugin: PDBeMolstarPlugin;
+    onChainUpdate: (chainId: string) => void;
+    isLigandView: () => boolean;
+};
+
+export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
     updateViewerChain: (chainId: string) => void;
     isLigandView: () => boolean;
-    state: SequenceViewState = { structureOptions: { options: [], all: [] }, structure: Structure.Empty, structureRef: '', modelEntityId: '', chainGroupId: -1, operatorKey: '', mode: 'single' };
+    state: SequenceViewState = {
+        structureOptions: { options: [], all: [] },
+        structure: Structure.Empty,
+        structureRef: "",
+        modelEntityId: "",
+        chainGroupId: -1,
+        operatorKey: "",
+        mode: "single",
+    };
+    
     entityChainPairs: EntityChainPairs | undefined;
     notPolymerEntityChainPairs: EntityChainPairs | undefined;
     lastValidChainId: string | undefined;
@@ -454,8 +538,15 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
                 if (!ligand) return;
                 if (!ligand.structAsymId) return;
 
-                const entityId = getEntityIdFromStructAsymId(this.notPolymerEntityChainPairs.chainOptions, ligand.structAsymId);
-                const chainNumber = getChainNumberedIdFromStructAsymId(this.notPolymerEntityChainPairs.chainOptions, ligand.structAsymId);
+                const entityId = getEntityIdFromStructAsymId(
+                    this.notPolymerEntityChainPairs.chainOptions,
+                    ligand.structAsymId
+                );
+
+                const chainNumber = getChainNumberedIdFromStructAsymId(
+                    this.notPolymerEntityChainPairs.chainOptions,
+                    ligand.structAsymId
+                );
 
                 console.debug("Updating sequence selected options", entityId, chainNumber);
 
@@ -498,13 +589,26 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
             },
         });
 
-        if (this.plugin.state.data.select(StateSelection.Generators.rootsOfType(PSO.Molecule.Structure)).length > 0) this.setState(this.getInitialState());
+        if (
+            this.plugin.state.data.select(
+                StateSelection.Generators.rootsOfType(PSO.Molecule.Structure)
+            ).length > 0
+        )
+            this.setState(this.getInitialState());
 
-        this.subscribe(this.plugin.state.events.object.updated, ({ ref, obj }) => {
-            if (ref === this.state.structureRef && obj && obj.type === PSO.Molecule.Structure.type && obj.data !== this.state.structure) {
-                this.sync();
+        this.subscribe(
+            this.plugin.state.events.object.updated,
+            ({ ref, obj }) => {
+                if (
+                    ref === this.state.structureRef &&
+                    obj &&
+                    obj.type === PSO.Molecule.Structure.type &&
+                    obj.data !== this.state.structure
+                ) {
+                    this.sync();
+                }
             }
-        });
+        );
 
         this.subscribe(this.plugin.state.events.object.created, ({ obj }) => {
             if (obj && obj.type === PSO.Molecule.Structure.type) {
@@ -532,8 +636,14 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
 
     private getSequenceWrapper(params: SequenceView['params']) {
         return {
-            wrapper: getSequenceWrapper(this.state, this.plugin.managers.structure.selection),
-            label: `${PD.optionLabel(params.chain, this.state.chainGroupId)} | ${PD.optionLabel(params.entity, this.state.modelEntityId)}`
+            wrapper: getSequenceWrapper(
+                this.state,
+                this.plugin.managers.structure.selection
+            ),
+            label: `${PD.optionLabel(
+                params.chain,
+                this.state.chainGroupId
+            )} | ${PD.optionLabel(params.entity, this.state.modelEntityId)}`,
         };
     }
 
@@ -543,17 +653,29 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
         const structure = this.getStructure(this.state.structureRef);
         const wrappers: { wrapper: (string | SequenceWrapper.Any), label: string }[] = [];
 
-        for (const [modelEntityId, eLabel] of getModelEntityOptions(structure, { onlyPolymers: this.state.mode === 'polymers' })) {
-            for (const [chainGroupId, cLabel] of getChainOptions(structure, modelEntityId)) {
-                for (const [operatorKey] of getOperatorOptions(structure, modelEntityId, chainGroupId)) {
+        for (const [modelEntityId, eLabel] of getModelEntityOptions(structure, {
+            onlyPolymers: this.state.mode === "polymers",
+        })) {
+            for (const [chainGroupId, cLabel] of getChainOptions(
+                structure,
+                modelEntityId
+            )) {
+                for (const [operatorKey] of getOperatorOptions(
+                    structure,
+                    modelEntityId,
+                    chainGroupId
+                )) {
                     wrappers.push({
-                        wrapper: getSequenceWrapper({
-                            structure,
-                            modelEntityId,
-                            chainGroupId,
-                            operatorKey
-                        }, this.plugin.managers.structure.selection),
-                        label: `${cLabel} | ${eLabel}`
+                        wrapper: getSequenceWrapper(
+                            {
+                                structure,
+                                modelEntityId,
+                                chainGroupId,
+                                operatorKey,
+                            },
+                            this.plugin.managers.structure.selection
+                        ),
+                        label: `${cLabel} | ${eLabel}`,
                     });
                     if (wrappers.length > MaxSequenceWrappersCount) return [];
                 }
@@ -591,7 +713,15 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
             chainGroupId = this.state.chainGroupId;
             operatorKey = this.state.operatorKey;
         }
-        return { structureOptions, structure, structureRef, modelEntityId, chainGroupId, operatorKey, mode: this.props.defaultMode ?? 'single' };
+        return {
+            structureOptions,
+            structure,
+            structureRef,
+            modelEntityId,
+            chainGroupId,
+            operatorKey,
+            mode: this.props.defaultMode ?? "single",
+        };
     }
 
     private get params() {
@@ -638,48 +768,91 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
             case 'entity':
                 if (state.modelEntityId === p.value) return;
                 state.modelEntityId = p.value;
-                state.chainGroupId = getChainOptions(state.structure, state.modelEntityId)[0][0];
+                state.chainGroupId = getChainOptions(
+                    state.structure,
+                    state.modelEntityId
+                )[0][0];
                 if (this.entityChainPairs && !this.isLigandView()) {
                     try {
-                        const chainId = getChainIdFromNumberedId(this.entityChainPairs.chainOptions, String(state.chainGroupId));
+                        const chainId = getChainIdFromNumberedId(
+                            this.entityChainPairs.chainOptions,
+                            String(state.chainGroupId)
+                        );
                         this.lastValidChainId = chainId;
                         this.updateViewerChain(chainId);
                         this.props.plugin.canvas.hideToasts();
                     } catch (error) {
-                        console.error("Chain to change is not in one of the polymers.", error); // Can happen only if user is changing the entity through molstar sequence because he wants to look for surrounding residues
+                        console.error(
+                            "Chain to change is not in one of the polymers.",
+                            error
+                        ); // Can happen only if user is changing the entity through molstar sequence because he wants to look for surrounding residues
                         if (this.lastValidChainId) {
                             try {
-                                const previousStructAsymId = getStructAsymIdFromChainId(this.entityChainPairs.chainOptions, this.lastValidChainId);
+                                const previousStructAsymId = getStructAsymIdFromChainId(
+                                    this.entityChainPairs.chainOptions,
+                                    this.lastValidChainId
+                                );
                                 const key = `${state.structureRef}-${state.modelEntityId}-${state.chainGroupId}`;
-                                this.props.plugin.canvas.showToast({ title: "Chain not in entry", message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]`, key });
+                                this.props.plugin.canvas.showToast({
+                                    title: "Chain not in entry",
+                                    message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]`,
+                                    key,
+                                });
                             } catch (error) {
-                                console.error("Previous valid chain is not in one of the polymers. This should not happen.", error);
+                                console.error(
+                                    "Previous valid chain is not in one of the polymers. This should not happen.",
+                                    error
+                                );
                             }
                         }
                     }
                 }
 
-                state.operatorKey = getOperatorOptions(state.structure, state.modelEntityId, state.chainGroupId)[0][0];
+                state.operatorKey = getOperatorOptions(
+                    state.structure,
+                    state.modelEntityId,
+                    state.chainGroupId
+                )[0][0];
                 break;
             case 'chain':
                 if (state.chainGroupId === p.value) return;
                 state.chainGroupId = p.value;
 
-                if (this.entityChainPairs && this.notPolymerEntityChainPairs && !this.isLigandView()) {
+                if (
+                    this.entityChainPairs &&
+                    this.notPolymerEntityChainPairs &&
+                    !this.isLigandView()
+                ) {
                     try {
-                        const chainId = getChainIdFromNumberedId(this.entityChainPairs.chainOptions, String(p.value));
+                        const chainId = getChainIdFromNumberedId(
+                            this.entityChainPairs.chainOptions,
+                            String(p.value)
+                        );
                         this.lastValidChainId = chainId;
                         this.updateViewerChain(chainId);
                         this.props.plugin.canvas.hideToasts();
                     } catch (error) {
-                        console.error("Chain to change is not in one of the polymers.", error); // Can happen only if user is changing the entity through molstar sequence because he wants to look for surrounding residues
+                        console.error(
+                            "Chain to change is not in one of the polymers.",
+                            error
+                        ); // Can happen only if user is changing the entity through molstar sequence because he wants to look for surrounding residues
                         if (this.lastValidChainId) {
                             try {
-                                const previousStructAsymId = getStructAsymIdFromChainId(this.entityChainPairs.chainOptions, this.lastValidChainId);
+                                const previousStructAsymId = getStructAsymIdFromChainId(
+                                    this.entityChainPairs.chainOptions,
+                                    this.lastValidChainId
+                                );
                                 const key = `${state.structureRef}-${state.modelEntityId}-${state.chainGroupId}`;
-                                this.props.plugin.canvas.showToast({ title: "Chain not in entry", message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]`, key });
+                                this.props.plugin.canvas.showToast({
+                                    title: "Chain not in entry",
+                                    message: `Still showing previous chain: ${previousStructAsymId} [auth ${this.lastValidChainId}]`,
+                                    key,
+                                });
                             } catch (error) {
-                                console.error("Previous valid chain is not in one of the polymers. This should not happen.", error);
+                                console.error(
+                                    "Previous valid chain is not in one of the polymers. This should not happen.",
+                                    error
+                                );
                             }
                         }
                     }
@@ -710,36 +883,107 @@ export class SequenceView extends PluginUIComponent<{ defaultMode?: SequenceView
         const values = this.values;
         const sequenceWrappers = this.getSequenceWrappers(params);
 
-        return <div className='msp-sequence'>
-            <div className='msp-sequence-select'>
-                <Icon svg={HelpOutlineSvg} style={{ cursor: 'help', position: 'absolute', right: 0, top: 0 }}
-                    title='This shows a single sequence. Use the controls to show a different sequence.' />
+        return (
+            <div className="msp-sequence">
+                <div className="msp-sequence-select">
+                    <Icon
+                        svg={HelpOutlineSvg}
+                        style={{
+                            cursor: "help",
+                            position: "absolute",
+                            right: 0,
+                            top: 0,
+                        }}
+                        title="This shows a single sequence. Use the controls to show a different sequence."
+                    />
 
-                <span>Sequence of</span>
-                <PureSelectControl title={`[Structure] ${PD.optionLabel(params.structure, values.structure)}`} param={params.structure} name='structure' value={values.structure} onChange={this.setParamProps} />
-                <PureSelectControl title={`[Mode]`} param={SequenceViewModeParam} name='mode' value={values.mode} onChange={this.setParamProps} />
-                {values.mode === 'single' && <PureSelectControl title={`[Entity] ${PD.optionLabel(params.entity, values.entity)}`} param={params.entity} name='entity' value={values.entity} onChange={this.setParamProps} />}
-                {values.mode === 'single' && <PureSelectControl title={`[Chain] ${PD.optionLabel(params.chain, values.chain)}`} param={params.chain} name='chain' value={values.chain} onChange={this.setParamProps} />}
-                {params.operator.options.length > 1 && <>
-                    <PureSelectControl title={`[Instance] ${PD.optionLabel(params.operator, values.operator)}`} param={params.operator} name='operator' value={values.operator} onChange={this.setParamProps} />
-                </>}
+                    <span>Sequence of</span>
+                    <PureSelectControl
+                        title={`[Structure] ${PD.optionLabel(
+                            params.structure,
+                            values.structure
+                        )}`}
+                        param={params.structure}
+                        name="structure"
+                        value={values.structure}
+                        onChange={this.setParamProps}
+                    />
+
+                    <PureSelectControl
+                        title={`[Mode]`}
+                        param={SequenceViewModeParam}
+                        name="mode"
+                        value={values.mode}
+                        onChange={this.setParamProps}
+                    />
+
+                    {values.mode === "single" && (
+                        <PureSelectControl
+                            title={`[Entity] ${PD.optionLabel(
+                                params.entity,
+                                values.entity
+                            )}`}
+                            param={params.entity}
+                            name="entity"
+                            value={values.entity}
+                            onChange={this.setParamProps}
+                        />
+                    )}
+
+                    {values.mode === "single" && (
+                        <PureSelectControl
+                            title={`[Chain] ${PD.optionLabel(
+                                params.chain,
+                                values.chain
+                            )}`}
+                            param={params.chain}
+                            name="chain"
+                            value={values.chain}
+                            onChange={this.setParamProps}
+                        />
+                    )}
+
+                    {params.operator.options.length > 1 && (
+                        <>
+                            <PureSelectControl
+                                title={`[Instance] ${PD.optionLabel(
+                                    params.operator,
+                                    values.operator
+                                )}`}
+                                param={params.operator}
+                                name="operator"
+                                value={values.operator}
+                                onChange={this.setParamProps}
+                            />
+                        </>
+                    )}
+                </div>
+
+                <NonEmptySequenceWrapper>
+                    {sequenceWrappers.map((s, i) => {
+                        const elem =
+                            typeof s.wrapper === "string" ? (
+                                <div key={i} className="msp-sequence-wrapper">
+                                    {s.wrapper}
+                                </div>
+                            ) : (
+                                <Sequence key={i} sequenceWrapper={s.wrapper} />
+                            );
+
+                        if (values.mode === "single") return elem;
+
+                        return (
+                            <React.Fragment key={i}>
+                                <div className="msp-sequence-chain-label">
+                                    {s.label}
+                                </div>
+                                {elem}
+                            </React.Fragment>
+                        );
+                    })}
+                </NonEmptySequenceWrapper>
             </div>
-
-            <NonEmptySequenceWrapper>
-                {sequenceWrappers.map((s, i) => {
-                    const elem = typeof s.wrapper === 'string'
-                        ? <div key={i} className='msp-sequence-wrapper'>{s.wrapper}</div>
-                        : <Sequence key={i} sequenceWrapper={s.wrapper} />;
-
-                    if (values.mode === 'single') return elem;
-
-                    return <React.Fragment key={i}>
-                        <div className='msp-sequence-chain-label'>{s.label}</div>
-                        {elem}
-                    </React.Fragment>;
-                })}
-            </NonEmptySequenceWrapper>
-        </div>;
+        );
     }
 }
 
