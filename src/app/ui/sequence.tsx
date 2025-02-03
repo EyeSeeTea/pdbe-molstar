@@ -772,7 +772,7 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
                     state.structure,
                     state.modelEntityId
                 )[0][0];
-                this.updateChainInViewer(p.value, state);
+                this.updateChainInViewer(state.chainGroupId, state);
                 state.operatorKey = getOperatorOptions(
                     state.structure,
                     state.modelEntityId,
