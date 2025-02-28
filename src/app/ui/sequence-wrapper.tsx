@@ -5,7 +5,8 @@ import { PDBeMolstarPlugin } from "..";
 export function initSequenceView(
     plugin: PDBeMolstarPlugin,
     onChainUpdate: (chainId: string) => void,
-    isLigandView: () => boolean
+    isLigandView: () => boolean,
+    sequenceCompleted: () => void
 ) {
     return {
         component: class SequenceViewWrapper extends React.Component<{}> {
@@ -16,6 +17,7 @@ export function initSequenceView(
                         plugin={plugin}
                         onChainUpdate={onChainUpdate}
                         isLigandView={isLigandView}
+                        sequenceCompleted={sequenceCompleted}
                     />
                 );
             }

@@ -44,7 +44,6 @@ import { AnimateAssemblyUnwind } from 'Molstar/mol-plugin-state/animation/built-
 import { DownloadDensity, EmdbDownloadProvider } from 'molstar/lib/mol-plugin-state/actions/volume';
 import { ControlsWrapper } from 'molstar/lib/mol-plugin-ui/plugin';
 import { PluginToast } from 'molstar/lib/mol-plugin/util/toast';
-import { getEntityChainPairs } from './ui/sequence';
 import { initSequenceView } from './ui/sequence-wrapper';
 import { PluginContext } from 'molstar/lib/mol-plugin/context';
 
@@ -65,7 +64,7 @@ class PDBeMolstarPlugin {
     readonly events = {
         loadComplete: this._ev<boolean>(),
         updateComplete: this._ev<boolean>(),
-        sequenceComplete: this._ev<any>(),
+        sequenceComplete: this._ev(),
         chainUpdate: this._ev<string>(), // chainId
         ligandUpdate: this._ev<{ ligandId: string, chainId: string }>(),
         dependencyChanged: {
@@ -173,7 +172,8 @@ class PDBeMolstarPlugin {
                         ? initSequenceView(
                               this,
                               this.initParams.onChainUpdate,
-                              this.initParams.isLigandView
+                              this.initParams.isLigandView,
+                              () => this.events.sequenceComplete.next(undefined)
                           ).component
                         : "none",
             },
@@ -695,15 +695,6 @@ class PDBeMolstarPlugin {
         // Create Ligand Representation
         if (isHetView) {
             await this.createLigandStructure(isBranchedView);
-        }
-
-        // Sequence Viewer
-        try {
-            const sequenceOptions = getEntityChainPairs(this.plugin.state.data, { onlyPolymers: true });
-            this.events.sequenceComplete.next(sequenceOptions);
-        } catch (error) {
-            console.error(error);
-            this.events.sequenceComplete.error(error);
         }
 
         this.events.loadComplete.next(true);

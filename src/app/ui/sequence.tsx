@@ -475,6 +475,7 @@ type Props = {
     plugin: PDBeMolstarPlugin;
     onChainUpdate: (chainId: string) => void;
     isLigandView: () => boolean;
+    sequenceCompleted: () => void
 };
 
 export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
@@ -503,6 +504,14 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
                 console.debug("molstar.events.chainUpdate", chainId);
 
                 if (!this.entityChainPairs) return;
+
+                const firstItem = this.entityChainPairs.chainOptions[0];
+                if (
+                    this.entityChainPairs.chainOptions.length === 1 &&
+                    firstItem &&
+                    firstItem.entityId === ""
+                )
+                    return;
 
                 const entityId = getEntityIdFromChainId(this.entityChainPairs.chainOptions, chainId)
                 const chainNumber = getChainNumberedIdFromChainId(this.entityChainPairs.chainOptions, chainId)
@@ -627,6 +636,7 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
         const structureOptions = getStructureOptions(this.plugin.state.data);
         if (arrayEqual(structureOptions.all, this.state.structureOptions.all)) return;
         this.setState(this.getInitialState());
+        this.props.sequenceCompleted();
     }
 
     private getStructure(ref: string) {
