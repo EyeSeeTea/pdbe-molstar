@@ -126,8 +126,8 @@ export function getLigand(options: { chainId: string; ligandId: string }, struct
         })
     );
 
-    const groupedLigandsById = _.groupBy(ligands, 'id');
-    return groupedLigandsById[options.ligandId].filter(ligand => ligand.chainId === options.chainId)[0];
+    const groupedLigandsById = _.groupBy(ligands, ({ id }) => id);
+    return groupedLigandsById[options.ligandId]?.filter(ligand => ligand.chainId === options.chainId)[0];
 }
 
 export function getModelEntityOptions(structure: Structure, options: { onlyPolymers: boolean}): [string, string][] {
@@ -284,17 +284,17 @@ export function getChainNumberedIdFromChainId(
     chainOptions: EntityChainPairs["chainOptions"],
     chainId: string
 ): number {
-    const chainNumberedId = chainOptions.reduce<number | undefined>(
-        (numberedId, opt) => {
-            if (typeof numberedId === "number") return numberedId;
+    const chainNumberedId = _(chainOptions)
+        .map((opt) => {
             const chain = opt.chains.find(
                 ([_id, label]) => label.replace(chainIdRegex, "$2") === chainId
             );
 
-            return chain && (chain[0] ?? undefined);
-        },
-        undefined
-    );
+            if (chain?.[0]) return chain[0];
+            else return;
+        })
+        .compact()
+        .first();
 
     if (chainNumberedId === undefined)
         throw new Error(`Chain not found for chain ${chainId}`);
@@ -306,12 +306,16 @@ export function getChainIdFromNumberedId(
     chainOptions: EntityChainPairs["chainOptions"],
     chainNumberedId: string
 ): string {
-    const chainId = chainOptions.reduce<string | undefined>((chainId, opt) => {
-        if (chainId) return chainId;
-        const chain = opt.chains.find(([id]) => String(id) === chainNumberedId);
-
-        return chain && (chain[1]?.replace(chainIdRegex, "$2") ?? undefined);
-    }, undefined);
+    const chainId = _(chainOptions)
+        .map((opt) => {
+            const chain = opt.chains.find(
+                ([id]) => String(id) === chainNumberedId
+            );
+            if (chain?.[1]) return chain[1].replace(chainIdRegex, "$2");
+            else return;
+        })
+        .compact()
+        .first();
 
     if (chainId === undefined)
         throw new Error(`Chain not found for chain ${chainNumberedId}`);
@@ -323,19 +327,16 @@ export function getStructAsymIdFromChainId(
     chainOptions: EntityChainPairs["chainOptions"],
     chainId: string
 ): string {
-    const structAsymId = chainOptions.reduce<string | undefined>(
-        (structAsymId, opt) => {
-            if (structAsymId) return structAsymId;
+    const structAsymId = _(chainOptions)
+        .map((opt) => {
             const chain = opt.chains.find(
-                ([id, label]) => label.replace(chainIdRegex, "$2") === chainId
+                ([_id, label]) => label.replace(chainIdRegex, "$2") === chainId
             );
-
-            return (
-                chain && (chain[1]?.replace(chainIdRegex, "$1") ?? undefined)
-            );
-        },
-        undefined
-    );
+            if (chain?.[1]) return chain[1].replace(chainIdRegex, "$1");
+            else return;
+        })
+        .compact()
+        .first();
 
     if (structAsymId === undefined)
         throw new Error(`Chain not found for chain ${chainId}`);
@@ -364,18 +365,17 @@ export function getChainNumberedIdFromStructAsymId(
     chainOptions: EntityChainPairs["chainOptions"],
     structAsymId: string
 ): number {
-    const chainNumberedId = chainOptions.reduce<number | undefined>(
-        (numberedId, opt) => {
-            if (typeof numberedId === "number") return numberedId;
+    const chainNumberedId = _(chainOptions)
+        .map((opt) => {
             const chain = opt.chains.find(
                 ([_id, label]) =>
                     label.replace(chainIdRegex, "$1") === structAsymId
             );
-
-            return chain && (chain[0] ?? undefined);
-        },
-        undefined
-    );
+            if (chain?.[0]) return chain[0];
+            else return;
+        })
+        .compact()
+        .first();
 
     if (chainNumberedId === undefined)
         throw new Error(
@@ -491,16 +491,17 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
 
                 if (!this.entityChainPairs) return;
 
-                const firstItem = this.entityChainPairs.chainOptions[0];
+                const chainOptions = this.entityChainPairs.chainOptions;
+                const firstItem = chainOptions[0];
                 if (
-                    this.entityChainPairs.chainOptions.length === 1 &&
+                    chainOptions.length === 1 &&
                     firstItem &&
                     firstItem.entityId === ""
                 )
                     return;
 
-                const entityId = getEntityIdFromChainId(this.entityChainPairs.chainOptions, chainId)
-                const chainNumber = getChainNumberedIdFromChainId(this.entityChainPairs.chainOptions, chainId)
+                const entityId = getEntityIdFromChainId(chainOptions, chainId)
+                const chainNumber = getChainNumberedIdFromChainId(chainOptions, chainId)
 
                 console.debug("Updating sequence selected options", entityId, chainNumber);
 
