@@ -48,15 +48,7 @@ export function splitModelEntityId(modelEntityId: string) {
     return [parseInt(modelIdx), entityId];
 }
 
-export function getSequenceWrapper(
-    state: {
-        structure: Structure;
-        modelEntityId: string;
-        chainGroupId: number;
-        operatorKey: string;
-    },
-    structureSelection: StructureSelectionManager
-): SequenceWrapper.Any | string {
+export function getSequenceWrapper(state: { structure: Structure, modelEntityId: string, chainGroupId: number, operatorKey: string }, structureSelection: StructureSelectionManager): SequenceWrapper.Any | string {
     const { structure, modelEntityId, chainGroupId, operatorKey } = state;
     const l = StructureElement.Location.create(structure);
     const [modelIdx, entityId] = splitModelEntityId(modelEntityId);
@@ -393,7 +385,6 @@ export function getChainNumberedIdFromStructAsymId(
     return chainNumberedId;
 }
 
-
 export function getOperatorOptions(structure: Structure, modelEntityId: string, chainGroupId: number): [string, string][] {
     const options: [string, string][] = [];
     const l = StructureElement.Location.create(structure);
@@ -444,13 +435,8 @@ export function getStructure(state: State, ref: string) {
     return (cell.obj as PSO.Molecule.Structure).data;
 }
 
-export type SequenceViewMode = 'single' | 'polymers' | 'all';
-
-const SequenceViewModeParam = PD.Select<SequenceViewMode>("single", [
-    ["single", "Chain"],
-    ["polymers", "Polymers"],
-    ["all", "Everything"],
-]);
+export type SequenceViewMode = 'single' | 'polymers' | 'all'
+const SequenceViewModeParam = PD.Select<SequenceViewMode>('single', [['single', 'Chain'], ['polymers', 'Polymers'], ['all', 'Everything']]);
 
 type EntityChainPairs = {
     entityOptions: [string, string][];
@@ -475,7 +461,7 @@ type Props = {
     plugin: PDBeMolstarPlugin;
     onChainUpdate: (chainId: string) => void;
     isLigandView: () => boolean;
-    sequenceCompleted: () => void
+    sequenceCompleted: () => void;
 };
 
 export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
@@ -598,26 +584,13 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
             },
         });
 
-        if (
-            this.plugin.state.data.select(
-                StateSelection.Generators.rootsOfType(PSO.Molecule.Structure)
-            ).length > 0
-        )
-            this.setState(this.getInitialState());
+        if (this.plugin.state.data.select(StateSelection.Generators.rootsOfType(PSO.Molecule.Structure)).length > 0) this.setState(this.getInitialState());
 
-        this.subscribe(
-            this.plugin.state.events.object.updated,
-            ({ ref, obj }) => {
-                if (
-                    ref === this.state.structureRef &&
-                    obj &&
-                    obj.type === PSO.Molecule.Structure.type &&
-                    obj.data !== this.state.structure
-                ) {
-                    this.sync();
-                }
+        this.subscribe(this.plugin.state.events.object.updated, ({ ref, obj }) => {
+            if (ref === this.state.structureRef && obj && obj.type === PSO.Molecule.Structure.type && obj.data !== this.state.structure) {
+                this.sync();
             }
-        );
+        });
 
         this.subscribe(this.plugin.state.events.object.created, ({ obj }) => {
             if (obj && obj.type === PSO.Molecule.Structure.type) {
@@ -646,14 +619,8 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
 
     private getSequenceWrapper(params: SequenceView['params']) {
         return {
-            wrapper: getSequenceWrapper(
-                this.state,
-                this.plugin.managers.structure.selection
-            ),
-            label: `${PD.optionLabel(
-                params.chain,
-                this.state.chainGroupId
-            )} | ${PD.optionLabel(params.entity, this.state.modelEntityId)}`,
+            wrapper: getSequenceWrapper(this.state, this.plugin.managers.structure.selection),
+            label: `${PD.optionLabel(params.chain, this.state.chainGroupId)} | ${PD.optionLabel(params.entity, this.state.modelEntityId)}`
         };
     }
 
@@ -663,29 +630,17 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
         const structure = this.getStructure(this.state.structureRef);
         const wrappers: { wrapper: (string | SequenceWrapper.Any), label: string }[] = [];
 
-        for (const [modelEntityId, eLabel] of getModelEntityOptions(structure, {
-            onlyPolymers: this.state.mode === "polymers",
-        })) {
-            for (const [chainGroupId, cLabel] of getChainOptions(
-                structure,
-                modelEntityId
-            )) {
-                for (const [operatorKey] of getOperatorOptions(
-                    structure,
-                    modelEntityId,
-                    chainGroupId
-                )) {
+        for (const [modelEntityId, eLabel] of getModelEntityOptions(structure, { onlyPolymers: this.state.mode === 'polymers' })) {
+            for (const [chainGroupId, cLabel] of getChainOptions(structure, modelEntityId)) {
+                for (const [operatorKey] of getOperatorOptions(structure, modelEntityId, chainGroupId)) {
                     wrappers.push({
-                        wrapper: getSequenceWrapper(
-                            {
-                                structure,
-                                modelEntityId,
-                                chainGroupId,
-                                operatorKey,
-                            },
-                            this.plugin.managers.structure.selection
-                        ),
-                        label: `${cLabel} | ${eLabel}`,
+                        wrapper: getSequenceWrapper({
+                            structure,
+                            modelEntityId,
+                            chainGroupId,
+                            operatorKey
+                        }, this.plugin.managers.structure.selection),
+                        label: `${cLabel} | ${eLabel}`
                     });
                     if (wrappers.length > MaxSequenceWrappersCount) return [];
                 }
@@ -723,15 +678,7 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
             chainGroupId = this.state.chainGroupId;
             operatorKey = this.state.operatorKey;
         }
-        return {
-            structureOptions,
-            structure,
-            structureRef,
-            modelEntityId,
-            chainGroupId,
-            operatorKey,
-            mode: this.props.defaultMode ?? "single",
-        };
+        return { structureOptions, structure, structureRef, modelEntityId, chainGroupId, operatorKey, mode: this.props.defaultMode ?? 'single' };
     }
 
     private get params() {
@@ -783,11 +730,7 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
                     state.modelEntityId
                 )[0][0];
                 this.updateChainInViewer(state.chainGroupId, state);
-                state.operatorKey = getOperatorOptions(
-                    state.structure,
-                    state.modelEntityId,
-                    state.chainGroupId
-                )[0][0];
+                state.operatorKey = getOperatorOptions(state.structure, state.modelEntityId, state.chainGroupId)[0][0];
                 break;
             case 'chain':
                 if (state.chainGroupId === p.value) return;
@@ -828,7 +771,7 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
             }
         }
     }
-
+        
     // Can happen only if user is changing the entity through molstar sequence because he wants to look for surrounding residues
     private handleInvalidChain(
         error: any,
@@ -877,105 +820,36 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
         const values = this.values;
         const sequenceWrappers = this.getSequenceWrappers(params);
 
-        return (
-            <div className="msp-sequence">
-                <div className="msp-sequence-select">
-                    <Icon
-                        svg={HelpOutlineSvg}
-                        style={{
-                            cursor: "help",
-                            position: "absolute",
-                            right: 0,
-                            top: 0,
-                        }}
-                        title="This shows a single sequence. Use the controls to show a different sequence."
-                    />
+        return <div className='msp-sequence'>
+            <div className='msp-sequence-select'>
+                <Icon svg={HelpOutlineSvg} style={{ cursor: 'help', position: 'absolute', right: 0, top: 0 }}
+                    title='This shows a single sequence. Use the controls to show a different sequence.' />
 
-                    <span>Sequence of</span>
-                    <PureSelectControl
-                        title={`[Structure] ${PD.optionLabel(
-                            params.structure,
-                            values.structure
-                        )}`}
-                        param={params.structure}
-                        name="structure"
-                        value={values.structure}
-                        onChange={this.setParamProps}
-                    />
-
-                    <PureSelectControl
-                        title={`[Mode]`}
-                        param={SequenceViewModeParam}
-                        name="mode"
-                        value={values.mode}
-                        onChange={this.setParamProps}
-                    />
-
-                    {values.mode === "single" && (
-                        <PureSelectControl
-                            title={`[Entity] ${PD.optionLabel(
-                                params.entity,
-                                values.entity
-                            )}`}
-                            param={params.entity}
-                            name="entity"
-                            value={values.entity}
-                            onChange={this.setParamProps}
-                        />
-                    )}
-
-                    {values.mode === "single" && (
-                        <PureSelectControl
-                            title={`[Chain] ${PD.optionLabel(
-                                params.chain,
-                                values.chain
-                            )}`}
-                            param={params.chain}
-                            name="chain"
-                            value={values.chain}
-                            onChange={this.setParamProps}
-                        />
-                    )}
-
-                    {params.operator.options.length > 1 && (
-                        <PureSelectControl
-                            title={`[Instance] ${PD.optionLabel(
-                                params.operator,
-                                values.operator
-                            )}`}
-                            param={params.operator}
-                            name="operator"
-                            value={values.operator}
-                            onChange={this.setParamProps}
-                        />
-                    )}
-                </div>
-
-                <NonEmptySequenceWrapper>
-                    {sequenceWrappers.map((s, i) => {
-                        const elem =
-                            typeof s.wrapper === "string" ? (
-                                <div key={i} className="msp-sequence-wrapper">
-                                    {s.wrapper}
-                                </div>
-                            ) : (
-                                <Sequence key={i} sequenceWrapper={s.wrapper} />
-                            );
-
-                        if (values.mode === "single") return elem;
-
-                        return (
-                            <React.Fragment key={i}>
-                                <div className="msp-sequence-chain-label">
-                                    {s.label}
-                                </div>
-                                {elem}
-                            </React.Fragment>
-                        );
-                    })}
-                </NonEmptySequenceWrapper>
+                <span>Sequence of</span>
+                <PureSelectControl title={`[Structure] ${PD.optionLabel(params.structure, values.structure)}`} param={params.structure} name='structure' value={values.structure} onChange={this.setParamProps} />
+                <PureSelectControl title={`[Mode]`} param={SequenceViewModeParam} name='mode' value={values.mode} onChange={this.setParamProps} />
+                {values.mode === 'single' && <PureSelectControl title={`[Entity] ${PD.optionLabel(params.entity, values.entity)}`} param={params.entity} name='entity' value={values.entity} onChange={this.setParamProps} />}
+                {values.mode === 'single' && <PureSelectControl title={`[Chain] ${PD.optionLabel(params.chain, values.chain)}`} param={params.chain} name='chain' value={values.chain} onChange={this.setParamProps} />}
+                {params.operator.options.length > 1 && <>
+                    <PureSelectControl title={`[Instance] ${PD.optionLabel(params.operator, values.operator)}`} param={params.operator} name='operator' value={values.operator} onChange={this.setParamProps} />
+                </>}
             </div>
-        );
+
+            <NonEmptySequenceWrapper>
+                {sequenceWrappers.map((s, i) => {
+                    const elem = typeof s.wrapper === 'string'
+                        ? <div key={i} className='msp-sequence-wrapper'>{s.wrapper}</div>
+                        : <Sequence key={i} sequenceWrapper={s.wrapper} />;
+
+                    if (values.mode === 'single') return elem;
+
+                    return <React.Fragment key={i}>
+                        <div className='msp-sequence-chain-label'>{s.label}</div>
+                        {elem}
+                    </React.Fragment>;
+                })}
+            </NonEmptySequenceWrapper>
+        </div>;
     }
 }
 
