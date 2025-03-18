@@ -747,7 +747,7 @@ export class SequenceView extends PluginUIComponent<Props, SequenceViewState> {
     };
 
     private updateChainInViewer(
-        value: any,
+        value: unknown,
         state: {
             structureRef: string;
             modelEntityId: string;
