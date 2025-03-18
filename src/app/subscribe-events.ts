@@ -64,17 +64,21 @@ export function subscribeToComponentEvents(wrapperCtx: PDBeMolstarPlugin) {
             let highlightQuery: any = undefined;
 
             const proteinId = wrapperCtx.proteinId;
+            const start = parseInt(e.detail.start);
+            const end = parseInt(e.detail.end);
 
             // Create query object from event data
-            if(e.detail.start && e.detail.end){
-                highlightQuery = proteinId ? {
-                    uniprot_accession: proteinId,
-                    start_uniprot_residue_number: parseInt(e.detail.start),
-                    end_uniprot_residue_number: parseInt(e.detail.end)
-                } : {
-                    start_auth_residue_number: parseInt(e.detail.start),
-                    end_auth_residue_number: parseInt(e.detail.end)
-                };
+            if (start && end) {
+                highlightQuery = proteinId
+                    ? {
+                          uniprot_accession: proteinId,
+                          start_uniprot_residue_number: start,
+                          end_uniprot_residue_number: end,
+                      }
+                    : {
+                          start_auth_residue_number: start,
+                          end_auth_residue_number: end,
+                      };
             }
 
             if(e.detail.feature && e.detail.feature.entityId) highlightQuery['entity_id'] = e.detail.feature.entityId + '';
@@ -134,17 +138,21 @@ export function subscribeToComponentEvents(wrapperCtx: PDBeMolstarPlugin) {
             let highlightQuery: any = undefined;
 
             const proteinId = wrapperCtx.proteinId;
+            const start = parseInt(e.detail.start);
+            const end = parseInt(e.detail.end);
 
             // Create query object from event data
-            if(e.detail.start && e.detail.end){
-                highlightQuery = proteinId ? {
-                    uniprot_accession: proteinId,
-                    start_uniprot_residue_number: parseInt(e.detail.start),
-                    end_uniprot_residue_number: parseInt(e.detail.end)
-                } : {
-                    start_auth_residue_number: parseInt(e.detail.start),
-                    end_auth_residue_number: parseInt(e.detail.end)
-                };
+            if (start && end) {
+                highlightQuery = proteinId
+                    ? {
+                          uniprot_accession: proteinId,
+                          start_uniprot_residue_number: start,
+                          end_uniprot_residue_number: end,
+                      }
+                    : {
+                          start_auth_residue_number: start,
+                          end_auth_residue_number: end,
+                      };
             }
 
             if(e.detail.feature && e.detail.feature.entityId) highlightQuery['entity_id'] = e.detail.feature.entityId + '';
