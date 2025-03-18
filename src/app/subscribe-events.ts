@@ -61,31 +61,17 @@ export function subscribeToComponentEvents(wrapperCtx: PDBeMolstarPlugin) {
     document.addEventListener('protvista-mouseover', function(e: any){
         if(typeof e.detail !== 'undefined'){
 
-            let highlightQuery: any = undefined;
-
-            const proteinId = wrapperCtx.proteinId;
-            const start = parseInt(e.detail.start);
-            const end = parseInt(e.detail.end);
+            let highlightQuery: Maybe<QueryParam> = undefined;
 
             // Create query object from event data
-            if (start && end) {
-                highlightQuery = proteinId
-                    ? {
-                          uniprot_accession: proteinId,
-                          start_uniprot_residue_number: start,
-                          end_uniprot_residue_number: end,
-                      }
-                    : {
-                          start_auth_residue_number: start,
-                          end_auth_residue_number: end,
-                      };
+            highlightQuery = getStartEndQuery(wrapperCtx, e.detail.start, e.detail.end);
+
+            if(highlightQuery) {
+                if(e.detail.feature && e.detail.feature.entityId) highlightQuery['entity_id'] = e.detail.feature.entityId + '';
+                if(e.detail.feature && e.detail.feature.bestChainId) highlightQuery['auth_asym_id'] = e.detail.feature.bestChainId;
+                if(e.detail.feature && e.detail.feature.chainId) highlightQuery['auth_asym_id'] = e.detail.feature.chainId;
+                wrapperCtx.visual.highlight({data: [highlightQuery]});
             }
-
-            if(e.detail.feature && e.detail.feature.entityId) highlightQuery['entity_id'] = e.detail.feature.entityId + '';
-            if(e.detail.feature && e.detail.feature.bestChainId) highlightQuery['auth_asym_id'] = e.detail.feature.bestChainId;
-            if(e.detail.feature && e.detail.feature.chainId) highlightQuery['auth_asym_id'] = e.detail.feature.chainId;
-
-            if(highlightQuery) wrapperCtx.visual.highlight({data: [highlightQuery]});
         }
     });
 
@@ -135,38 +121,21 @@ export function subscribeToComponentEvents(wrapperCtx: PDBeMolstarPlugin) {
         if(typeof e.detail !== 'undefined'){
 
             let showInteraction = false;
-            let highlightQuery: any = undefined;
+            let highlightQuery: Maybe<QueryParam> = undefined;
 
-            const proteinId = wrapperCtx.proteinId;
-            const start = parseInt(e.detail.start);
-            const end = parseInt(e.detail.end);
-
-            // Create query object from event data
-            if (start && end) {
-                highlightQuery = proteinId
-                    ? {
-                          uniprot_accession: proteinId,
-                          start_uniprot_residue_number: start,
-                          end_uniprot_residue_number: end,
-                      }
-                    : {
-                          start_auth_residue_number: start,
-                          end_auth_residue_number: end,
-                      };
-            }
-
-            if(e.detail.feature && e.detail.feature.entityId) highlightQuery['entity_id'] = e.detail.feature.entityId + '';
-            if(e.detail.feature && e.detail.feature.bestChainId) highlightQuery['auth_asym_id'] = e.detail.feature.bestChainId;
-            if(e.detail.feature && e.detail.feature.chainId) highlightQuery['auth_asym_id'] = e.detail.feature.chainId;
-
+            highlightQuery = getStartEndQuery(wrapperCtx, e.detail.start, e.detail.end);
+            
             if(e.detail.feature && e.detail.feature.accession && e.detail.feature.accession.split(' ')[0] === 'Chain' || e.detail.feature.tooltipContent === 'Ligand binding site') {
                 showInteraction = true;
             }
-
+            
             if(e.detail.start === e.detail.end) showInteraction = true;
-
+            
             if(highlightQuery){
-
+                if(e.detail.feature && e.detail.feature.entityId) highlightQuery['entity_id'] = e.detail.feature.entityId + '';
+                if(e.detail.feature && e.detail.feature.bestChainId) highlightQuery['auth_asym_id'] = e.detail.feature.bestChainId;
+                if(e.detail.feature && e.detail.feature.chainId) highlightQuery['auth_asym_id'] = e.detail.feature.chainId;
+                
                 if(showInteraction){
                     highlightQuery['sideChain'] = true;
                 }else{
@@ -267,6 +236,30 @@ export function subscribeToComponentEvents(wrapperCtx: PDBeMolstarPlugin) {
     document.addEventListener('PDB.seqViewer.mouseout', function(e){
         wrapperCtx.visual.clearHighlight();
     });
+}
+
+type Maybe<T> = T | undefined;
+
+function getStartEndQuery(wrapperCtx: PDBeMolstarPlugin, start: string, end: string): Maybe<QueryParam> {
+    const proteinId = wrapperCtx.proteinId;
+    const startResidueNumber = parseInt(start) || undefined;
+    const endResidueNumber = parseInt(end) || undefined;
+
+    // Create query object from event data
+    if (startResidueNumber && endResidueNumber) {
+        return proteinId
+            ? {
+                  uniprot_accession: proteinId,
+                  start_uniprot_residue_number: startResidueNumber,
+                  end_uniprot_residue_number: endResidueNumber,
+              }
+            : {
+                  start_auth_residue_number: startResidueNumber,
+                  end_auth_residue_number: endResidueNumber,
+              };
+    } else {
+        return undefined;
+    }
 }
 
 interface MultiSelectDetail {
