@@ -290,11 +290,9 @@ export function getChainNumberedIdFromChainId(
                 ([_id, label]) => label.replace(chainIdRegex, "$2") === chainId
             );
 
-            if (chain?.[0]) return chain[0];
+            if (chain) return chain[0];
             else return;
-        })
-        .compact()
-        .first();
+        }).filter((c) => c !== undefined).first();
 
     if (chainNumberedId === undefined)
         throw new Error(`Chain not found for chain ${chainId}`);
@@ -311,10 +309,10 @@ export function getChainIdFromNumberedId(
             const chain = opt.chains.find(
                 ([id]) => String(id) === chainNumberedId
             );
-            if (chain?.[1]) return chain[1].replace(chainIdRegex, "$2");
+            if (chain) return chain[1].replace(chainIdRegex, "$2");
             else return;
         })
-        .compact()
+        .filter((c) => c !== undefined)
         .first();
 
     if (chainId === undefined)
@@ -332,10 +330,10 @@ export function getStructAsymIdFromChainId(
             const chain = opt.chains.find(
                 ([_id, label]) => label.replace(chainIdRegex, "$2") === chainId
             );
-            if (chain?.[1]) return chain[1].replace(chainIdRegex, "$1");
+            if (chain) return chain[1].replace(chainIdRegex, "$1");
             else return;
         })
-        .compact()
+        .filter((c) => c !== undefined)
         .first();
 
     if (structAsymId === undefined)
@@ -371,10 +369,10 @@ export function getChainNumberedIdFromStructAsymId(
                 ([_id, label]) =>
                     label.replace(chainIdRegex, "$1") === structAsymId
             );
-            if (chain?.[0]) return chain[0];
+            if (chain) return chain[0];
             else return;
         })
-        .compact()
+        .filter((c) => c !== undefined)
         .first();
 
     if (chainNumberedId === undefined)
