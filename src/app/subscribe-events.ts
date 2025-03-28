@@ -1,6 +1,7 @@
+import { PDBeMolstarPlugin } from '.';
 import { QueryParam } from './helpers';
 
-export function subscribeToComponentEvents(wrapperCtx: any) {
+export function subscribeToComponentEvents(wrapperCtx: PDBeMolstarPlugin) {
     document.addEventListener('PDB.interactions.click', function(e: any){
         if(typeof e.detail !== 'undefined'){
             const data = e.detail.interacting_nodes ? { data: e.detail.interacting_nodes } : { data: [e.detail.selected_node] };
@@ -60,21 +61,17 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
     document.addEventListener('protvista-mouseover', function(e: any){
         if(typeof e.detail !== 'undefined'){
 
-            let highlightQuery: any = undefined;
+            let highlightQuery: Maybe<QueryParam> = undefined;
 
             // Create query object from event data
-            if(e.detail.start && e.detail.end){
-                highlightQuery = {
-                    start_residue_number: parseInt(e.detail.start),
-                    end_residue_number: parseInt(e.detail.end)
-                };
+            highlightQuery = getStartEndQuery(wrapperCtx, e.detail.start, e.detail.end);
+
+            if(highlightQuery) {
+                if(e.detail.feature && e.detail.feature.entityId) highlightQuery['entity_id'] = e.detail.feature.entityId + '';
+                if(e.detail.feature && e.detail.feature.bestChainId) highlightQuery['auth_asym_id'] = e.detail.feature.bestChainId;
+                if(e.detail.feature && e.detail.feature.chainId) highlightQuery['auth_asym_id'] = e.detail.feature.chainId;
+                wrapperCtx.visual.highlight({data: [highlightQuery]});
             }
-
-            if(e.detail.feature && e.detail.feature.entityId) highlightQuery['entity_id'] = e.detail.feature.entityId + '';
-            if(e.detail.feature && e.detail.feature.bestChainId) highlightQuery['struct_asym_id'] = e.detail.feature.bestChainId;
-            if(e.detail.feature && e.detail.feature.chainId) highlightQuery['struct_asym_id'] = e.detail.feature.chainId;
-
-            if(highlightQuery) wrapperCtx.visual.highlight({data: [highlightQuery]});
         }
     });
 
@@ -82,13 +79,27 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
         const { detail } = (ev as unknown as ({ detail: MultiSelectDetail | undefined }));
         if (detail === undefined) return;
 
+        const proteinId = wrapperCtx.proteinId;
+
         const params = (detail.fragments || []).map((fragment): QueryParam => {
-            return {
-                start_residue_number: (fragment.start),
-                end_residue_number: (fragment.end),
-                color: fragment.color,
-                entity_id: fragment.feature?.entityId,
-                struct_asym_id: fragment.feature?.bestChainId,
+            if (proteinId) {
+                return {
+                    uniprot_accession: proteinId,
+                    start_uniprot_residue_number: fragment.start,
+                    end_uniprot_residue_number: fragment.end,
+                    color: fragment.color,
+                    entity_id: fragment.feature?.entityId,
+                    auth_asym_id: fragment.feature?.bestChainId,
+                }
+            }
+            else {
+                return {
+                    start_auth_residue_number: fragment.start,
+                    end_auth_residue_number: fragment.end,
+                    color: fragment.color,
+                    entity_id: fragment.feature?.entityId,
+                    auth_asym_id: fragment.feature?.bestChainId,
+                }
             };
         });
 
@@ -110,28 +121,21 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
         if(typeof e.detail !== 'undefined'){
 
             let showInteraction = false;
-            let highlightQuery: any = undefined;
+            let highlightQuery: Maybe<QueryParam> = undefined;
 
-            // Create query object from event data
-            if(e.detail.start && e.detail.end){
-                highlightQuery = {
-                    start_residue_number: parseInt(e.detail.start),
-                    end_residue_number: parseInt(e.detail.end)
-                };
-            }
-
-            if(e.detail.feature && e.detail.feature.entityId) highlightQuery['entity_id'] = e.detail.feature.entityId + '';
-            if(e.detail.feature && e.detail.feature.bestChainId) highlightQuery['struct_asym_id'] = e.detail.feature.bestChainId;
-            if(e.detail.feature && e.detail.feature.chainId) highlightQuery['struct_asym_id'] = e.detail.feature.chainId;
-
+            highlightQuery = getStartEndQuery(wrapperCtx, e.detail.start, e.detail.end);
+            
             if(e.detail.feature && e.detail.feature.accession && e.detail.feature.accession.split(' ')[0] === 'Chain' || e.detail.feature.tooltipContent === 'Ligand binding site') {
                 showInteraction = true;
             }
-
+            
             if(e.detail.start === e.detail.end) showInteraction = true;
-
+            
             if(highlightQuery){
-
+                if(e.detail.feature && e.detail.feature.entityId) highlightQuery['entity_id'] = e.detail.feature.entityId + '';
+                if(e.detail.feature && e.detail.feature.bestChainId) highlightQuery['auth_asym_id'] = e.detail.feature.bestChainId;
+                if(e.detail.feature && e.detail.feature.chainId) highlightQuery['auth_asym_id'] = e.detail.feature.chainId;
+                
                 if(showInteraction){
                     highlightQuery['sideChain'] = true;
                 }else{
@@ -232,6 +236,30 @@ export function subscribeToComponentEvents(wrapperCtx: any) {
     document.addEventListener('PDB.seqViewer.mouseout', function(e){
         wrapperCtx.visual.clearHighlight();
     });
+}
+
+type Maybe<T> = T | undefined;
+
+function getStartEndQuery(wrapperCtx: PDBeMolstarPlugin, start: string, end: string): Maybe<QueryParam> {
+    const proteinId = wrapperCtx.proteinId;
+    const startResidueNumber = parseInt(start) || undefined;
+    const endResidueNumber = parseInt(end) || undefined;
+
+    // Create query object from event data
+    if (startResidueNumber && endResidueNumber) {
+        return proteinId
+            ? {
+                  uniprot_accession: proteinId,
+                  start_uniprot_residue_number: startResidueNumber,
+                  end_uniprot_residue_number: endResidueNumber,
+              }
+            : {
+                  start_auth_residue_number: startResidueNumber,
+                  end_auth_residue_number: endResidueNumber,
+              };
+    } else {
+        return undefined;
+    }
 }
 
 interface MultiSelectDetail {

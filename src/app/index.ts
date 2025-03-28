@@ -1,7 +1,5 @@
 import { createPluginUI, DefaultPluginUISpec, InitParams, DefaultParams } from './spec';
-import { PluginContext } from 'Molstar/mol-plugin/context';
 import { PluginCommands } from 'Molstar/mol-plugin/commands';
-import { SequenceView } from "Molstar/mol-plugin-ui/sequence"
 import { PluginStateObject } from 'Molstar/mol-plugin-state/objects';
 import { StateTransform } from 'Molstar/mol-state';
 import { Loci, EmptyLoci } from 'Molstar/mol-model/loci';
@@ -46,6 +44,8 @@ import { AnimateAssemblyUnwind } from 'Molstar/mol-plugin-state/animation/built-
 import { DownloadDensity, EmdbDownloadProvider } from 'molstar/lib/mol-plugin-state/actions/volume';
 import { ControlsWrapper } from 'molstar/lib/mol-plugin-ui/plugin';
 import { PluginToast } from 'molstar/lib/mol-plugin/util/toast';
+import { initSequenceView } from './ui/sequence-wrapper';
+import { PluginContext } from 'molstar/lib/mol-plugin/context';
 
 require("Molstar/mol-plugin-ui/skin/dark.scss");
 
@@ -64,6 +64,13 @@ class PDBeMolstarPlugin {
     readonly events = {
         loadComplete: this._ev<boolean>(),
         updateComplete: this._ev<boolean>(),
+        sequenceComplete: this._ev(),
+        chainUpdate: this._ev<string>(), // chainId
+        ligandUpdate: this._ev<{ ligandId: string, chainId: string }>(),
+        dependencyChanged: {
+            onChainUpdate: this._ev<(chainId: string) => void>(),
+            isLigandView: this._ev<() => boolean>()
+        },
     };
 
     plugin: PluginContext;
@@ -75,6 +82,7 @@ class PDBeMolstarPlugin {
     isHighlightColorUpdated = false;
     isSelectedColorUpdated = false;
     toasts: string[] = [];
+    proteinId: string | undefined = undefined;
 
     async render(target: string | HTMLElement, options: InitParams) {
         if (!options) return;
@@ -158,7 +166,16 @@ class PDBeMolstarPlugin {
                 left: showDebugPanels ? LeftPanelControls : "none",
                 right: showDebugPanels ? ControlsWrapper : "none",
                 top: "none",
-                bottom: SequenceView,
+                bottom:
+                    this.initParams.onChainUpdate &&
+                    this.initParams.isLigandView
+                        ? initSequenceView(
+                              this,
+                              this.initParams.onChainUpdate,
+                              this.initParams.isLigandView,
+                              () => this.events.sequenceComplete.next(undefined)
+                          ).component
+                        : "none",
             },
             viewport: {
                 controls: PDBeViewportControls,
@@ -343,7 +360,7 @@ class PDBeMolstarPlugin {
             // Load Molecule CIF or coordQuery and Parse
             let dataSource = this.getMoleculeSrcUrl();
             if (dataSource) {
-                this.load({
+                await this.load({
                     url: dataSource.url,
                     label: this.initParams.moleculeId,
                     format: dataSource.format as BuiltInTrajectoryFormat,
@@ -682,7 +699,7 @@ class PDBeMolstarPlugin {
 
         this.events.loadComplete.next(true);
     }
-    
+
     applyVisualParams = () => {
         const TagRefs: any = {
             "structure-component-static-polymer": "polymer",
@@ -842,6 +859,13 @@ class PDBeMolstarPlugin {
         }
         return color;
     }
+
+    updateState = {
+        /* undefined for those cases where there is no uniprot */
+        proteinId: (id: string | undefined) => {
+            this.proteinId = id;
+        }
+    };
 
     visual = {
         highlight: (params: {
@@ -1090,7 +1114,7 @@ class PDBeMolstarPlugin {
             // Load Molecule CIF or coordQuery and Parse
             let dataSource = this.getMoleculeSrcUrl();
             if (dataSource) {
-                this.load(
+                await this.load(
                     {
                         url: dataSource.url,
                         label: this.initParams.moleculeId,
@@ -1103,6 +1127,15 @@ class PDBeMolstarPlugin {
             }
 
             this.events.updateComplete.next(true);
+        },
+        updateChain: (chainId: string) => this.events.chainUpdate.next(chainId),
+        updateLigand: (options: { chainId: string; ligandId: string }) =>
+            this.events.ligandUpdate.next(options),
+        updateDependency: {
+            onChainUpdate: (callback: (chainId: string) => void) =>
+                this.events.dependencyChanged.onChainUpdate.next(callback),
+            isLigandView: (callback: () => boolean) =>
+                this.events.dependencyChanged.isLigandView.next(callback),
         },
         visibility: (data: {
             polymer?: boolean;
